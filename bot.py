@@ -65,7 +65,11 @@ class Bot(discord.Client):
                     pass
             raise e
 
-        return file_name, self._combine_file(attachments)
+        return file_name, (
+            (await self._get_attachment(message_ids[0])).url
+            if len(attachments) == 1
+            else self._combine_file(attachments)
+        )
 
     def _split_file(self, data: io.BytesIO, max_size: int = DEFAULT_MAX_SIZE):
         data.seek(0)
@@ -81,7 +85,9 @@ class Bot(discord.Client):
         """
         message_ids = [
             (
-                await self.channel.send(file=discord.File(io.BytesIO(d), f"{file_name}_{idx}"))
+                await self.channel.send(
+                    file=discord.File(io.BytesIO(d), f"{file_name}{f'.part{idx}' if idx else ''}")
+                )
             ).id.__str__()
             for idx, d in enumerate(self._split_file(data))
         ]
