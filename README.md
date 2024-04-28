@@ -35,12 +35,14 @@
  ## 3. Set Up Environment Variables
  Rename the .env.example file to .env and fill in the required values for each environment variable according to your configuration.
 
- ### `.env.example`
+ `.env.example`:
  ```
- TOKEN=  # Discord Bot token
- CHANNEL=  # Storage channel ID (private channel recommended)
- SERVER_HOST=127.0.0.1  # Web server host
- SERVER_PORT=8000  # Web server port
+ TOKEN=  # discord bot token
+ CHANNEL=  # storage channel ID (private channel recommend)
+ SERVER_HOST=127.0.0.1  # web serber host
+ SERVER_PORT=8000  # web server port
+ CACHE_MAX_SIZE=512MB  # cache max size
+ CACHE_MAX_TTL=24h  # cache max ttl
  ```
 
  4. Install Dependencies
@@ -53,5 +55,5 @@
  Once the dependencies are installed and the environment variables are set up, you can run the project!
  ```bash
  # Run the project in the project directory
- python your_project.py
+ python main.py
  ```
