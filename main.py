@@ -1,7 +1,10 @@
+import io
 import mimetypes
 import os
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
+import aiohttp
 import discord
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -57,15 +60,39 @@ async def exception_handler(request, exc):
     return Response("Oops! Something went wrong.", 500, media_type="text/plain")
 
 
-@app.post("/upload")
-async def upload_route(file: UploadFile = File(...)):
+@app.post("/upload/file")
+async def upload_file_route(file: UploadFile = File(...)):
     id = await bot.upload_file(file.file, file.filename)
     return Response(
         f"File '{file.filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
     )
 
 
-def _get_media_type(file_name: str):
+def _guess_filename(content_type: str):
+    mime_type = mimetypes.guess_extension(content_type)
+    return mime_type or ""
+
+
+@app.post("/upload/url")
+async def upload_url_route(url: str):
+    parsed_url = urlparse(url)
+    if not parsed_url.scheme or not parsed_url.netloc:
+        return Response("Invalid URL.", 400, media_type="text/plain")
+
+    async with aiohttp.request("GET", url) as resp:
+        if not 200 <= resp.status < 300:
+            return Response("Invalid URL.", 400, media_type="text/plain")
+
+        data = await resp.read()
+        filename = parsed_url.path.split("/")[-1] or f"file{_guess_filename(resp.content_type)}"
+
+    id = await bot.upload_file(io.BytesIO(data), filename)
+    return Response(
+        f"File '{filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
+    )
+
+
+def _guess_media_type(file_name: str):
     mime_type, _ = mimetypes.guess_type(file_name)
     return mime_type or "application/octet-stream"
 
@@ -73,16 +100,14 @@ def _get_media_type(file_name: str):
 async def _get_attachment(id: str, file_name: str, auto_media_type=True):
     try:
         file_name, file = await bot.get_file(id, file_name)
-    except FileNotFoundError:
-        return Response("Content not found.", 404, media_type="text/plain")
-    except discord.NotFound:
+    except (FileNotFoundError, discord.NotFound):
         return Response("This content is no longer available.", 410, media_type="text/plain")
     except Exception:
         return HTTPException
 
     if isinstance(file, str):
         return RedirectResponse(file)
-    media_type = _get_media_type(file_name) if auto_media_type else "application/octet-stream"
+    media_type = _guess_media_type(file_name) if auto_media_type else "application/octet-stream"
     return StreamingResponseWithStatusCode(file, media_type=media_type)
 
 
