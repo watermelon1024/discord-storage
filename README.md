@@ -39,7 +39,7 @@
  ```
  TOKEN=  # discord bot token
  CHANNEL=  # storage channel ID (private channel recommend)
- SERVER_HOST=127.0.0.1  # web serber host
+ SERVER_HOST=127.0.0.1  # web server host
  SERVER_PORT=8000  # web server port
  CACHE_MAX_SIZE=512MB  # cache max size
  CACHE_MAX_TTL=24h  # cache max ttl
