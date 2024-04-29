@@ -1,8 +1,6 @@
 import io
-import mimetypes
 import os
 from contextlib import asynccontextmanager
-from urllib.parse import urlparse
 
 import aiohttp
 import discord
@@ -11,6 +9,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse, Response, StreamingResponse
 from starlette.types import Send
 
+import utils
 from bot import Bot
 
 load_dotenv()
@@ -68,14 +67,9 @@ async def upload_file_route(file: UploadFile = File(...)):
     )
 
 
-def _guess_filename(content_type: str):
-    mime_type = mimetypes.guess_extension(content_type)
-    return mime_type or ""
-
-
 @app.post("/upload/url")
 async def upload_url_route(url: str):
-    parsed_url = urlparse(url)
+    parsed_url = utils.urlparse(url)
     if not parsed_url.scheme or not parsed_url.netloc:
         return Response("Invalid URL.", 400, media_type="text/plain")
 
@@ -84,22 +78,17 @@ async def upload_url_route(url: str):
             return Response("Invalid URL.", 400, media_type="text/plain")
 
         data = await resp.read()
-        filename = parsed_url.path.split("/")[-1] or f"file{_guess_filename(resp.content_type)}"
 
+    filename = parsed_url.path.split("/")[-1] or f"file{utils.guess_filename(resp.content_type)}"
     id = await bot.upload_file(io.BytesIO(data), filename)
     return Response(
         f"File '{filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
     )
 
 
-def _guess_media_type(file_name: str):
-    mime_type, _ = mimetypes.guess_type(file_name)
-    return mime_type or "application/octet-stream"
-
-
-async def _get_attachment(id: str, file_name: str, auto_media_type=True):
+async def _get_attachment(id: str, filename: str, auto_media_type: bool = True):
     try:
-        file_name, file = await bot.get_file(id, file_name)
+        filename, file = await bot.get_file(id, filename)
     except (FileNotFoundError, discord.NotFound):
         return Response("This content is no longer available.", 410, media_type="text/plain")
     except Exception:
@@ -107,18 +96,20 @@ async def _get_attachment(id: str, file_name: str, auto_media_type=True):
 
     if isinstance(file, str):
         return RedirectResponse(file)
-    media_type = _guess_media_type(file_name) if auto_media_type else "application/octet-stream"
+    media_type = (
+        utils.guess_media_type(filename) if auto_media_type else "application/octet-stream"
+    )
     return StreamingResponseWithStatusCode(file, media_type=media_type)
 
 
-@app.get("/attachments/{id}/{file_name}")
-async def attachments_route(id: str, file_name: str):
-    return await _get_attachment(id, file_name, auto_media_type=False)
+@app.get("/attachments/{id}/{filename}")
+async def attachments_route(id: str, filename: str):
+    return await _get_attachment(id, filename, auto_media_type=False)
 
 
-@app.get("/view/{id}/{file_name}")
-async def view_route(id: str, file_name: str):
-    return await _get_attachment(id, file_name)
+@app.get("/view/{id}/{filename}")
+async def view_route(id: str, filename: str):
+    return await _get_attachment(id, filename)
 
 
 if __name__ == "__main__":
