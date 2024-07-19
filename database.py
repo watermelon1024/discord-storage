@@ -31,7 +31,7 @@ class Database:
             )
 
     async def add_file(
-        self, id: str, name: str, legalized_name: str, size: int | str, message_ids: list[str]
+        self, id: str, name: str, legalized_name: str, size: int, message_ids: list[str]
     ) -> None:
         """
         Adds a file to the database.
