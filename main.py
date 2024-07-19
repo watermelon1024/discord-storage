@@ -7,7 +7,7 @@ import discord
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 load_dotenv()
@@ -62,20 +62,18 @@ async def root(request: Request):
 @app.post("/upload/file", response_class=HTMLResponse)
 async def route_upload_file(file: UploadFile):
     id, legalized_filename = await bot.upload_file(file.file, file.filename, file.size)
-    return Response(
-        f"File '{legalized_filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
-    )
+    return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
 
 
 @app.post("/upload/url")
 async def route_upload_url(url: str):
     parsed_url = utils.urlparse(url)
     if not parsed_url.scheme or not parsed_url.netloc:
-        return Response("Invalid URL.", 400, media_type="text/plain")
+        return JSONResponse({"message": "Invalid URL."}, status_code=400)
 
     async with aiohttp.request("GET", url) as resp:
         if not resp.ok:
-            return Response("Invalid URL.", 400, media_type="text/plain")
+            return JSONResponse({"message": "Invalid URL."}, status_code=400)
 
         data = await resp.read()
 
@@ -85,9 +83,7 @@ async def route_upload_url(url: str):
         or f"file{utils.guess_filename(resp.content_type)}"
     )
     id, legalized_filename = await bot.upload_file(io.BytesIO(data), filename, len(data))
-    return Response(
-        f"File '{legalized_filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
-    )
+    return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
 
 
 @app.get("/attachments/{id}/{filename}")
