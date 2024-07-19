@@ -11,38 +11,40 @@
   <div class="w-full h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center">
     <div id="preview"
       class="*:max-w-[32rem] *:max-h-[18rem] *:border flex flex-row *:p-4 m-2 items-center justify-center">
+    </div>
+    <div id="result" class="*:border">
 
     </div>
-    <div id="result" class="">
-
-    </div>
+    <a href="" id="download"></a>
   </div>
   <script>
     let path = window.location.pathname.split('/');
     path.pop();
     let id = path.pop();
     let filename = path.pop();
-    console.log(`${window.location.host}/attachments/${id}/${filename}`)
+    console.log(`${window.location.host}/attachments/${id}/${filename}`);
     (async () => {
       const fileReq = await fetch(`${window.location.host}/attachments/${id}/${filename}`)
+      const download = document.getElementById('download');
       if (fileReq.status === 404) {
         document.getElementById('result').innerHTML = 'File not found';
+        download.hidden = true;
         return;
       }
-      const downloadButton = document.createElement('a');
-      downloadButton.href = `${window.location.host}/attachments/${id}/${filename}`;
+      download.href = `${window.location.host}/attachments/${id}/${filename}`;
+      download.innerHTML = 'Download';
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
-      if (file.type.includes('image')) {
+      if (['jpg','png','jpeg','gif'].includes(filename.split('.').pop())) {
         const img = document.createElement('img');
         img.src = url;
         document.getElementById('preview').appendChild(img);
-      } else if (file.type.includes('video')) {
+      } else if (['mp4','webm'].includes(filename.split('.').pop())) {
         const video = document.createElement('video');
         video.src = url;
         video.controls = true;
         document.getElementById('preview').appendChild(video);
-      } else if (file.type.includes('audio')) {
+      } else if (['mp3','ogg','wav'].includes(filename.split('.').pop())) {
         const audio = document.createElement('audio');
         audio.src = url;
         audio.controls = true;
