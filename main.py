@@ -60,7 +60,7 @@ async def exception_handler(request, exc):
 
 
 @app.post("/upload/file")
-async def upload_file_route(file: UploadFile = File(...)):
+async def route_upload_file(file: UploadFile = File(...)):
     id = await bot.upload_file(file.file, file.filename)
     return Response(
         f"File '{file.filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
@@ -74,7 +74,7 @@ async def upload_url_route(url: str):
         return Response("Invalid URL.", 400, media_type="text/plain")
 
     async with aiohttp.request("GET", url) as resp:
-        if not 200 <= resp.status < 300:
+        if not resp.ok:
             return Response("Invalid URL.", 400, media_type="text/plain")
 
         data = await resp.read()
@@ -88,11 +88,11 @@ async def upload_url_route(url: str):
 
 async def _get_attachment(id: str, filename: str, auto_media_type: bool = True):
     try:
-        filename, file = await bot.get_file(id, filename)
+        filename, size, file = await bot.get_file(id, filename)
     except (FileNotFoundError, discord.NotFound):
         return Response("This content is no longer available.", 410, media_type="text/plain")
     except Exception:
-        return HTTPException
+        return Response(status_code=500)
 
     if isinstance(file, str):
         return RedirectResponse(file)

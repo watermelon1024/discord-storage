@@ -53,7 +53,7 @@ class Bot(discord.Client):
         """
         Gets a file from the database.
         """
-        file_name, message_ids = await self.db.get_file(id, file_name)
+        file_name, size, message_ids = await self.db.get_file(id, file_name)
         try:
             attachments = [await self._get_attachment(id) for id in message_ids]
         except discord.NotFound as e:
@@ -65,10 +65,14 @@ class Bot(discord.Client):
                     pass
             raise e
 
-        return file_name, (
-            (await self._get_attachment(message_ids[0])).url
-            if len(attachments) == 1
-            else self._combine_file(attachments)
+        return (
+            file_name,
+            size,
+            (
+                (await self._get_attachment(message_ids[0])).url
+                if len(attachments) == 1
+                else self._combine_file(attachments)
+            ),
         )
 
     def _split_file(self, data: io.BytesIO, max_size: int = DEFAULT_MAX_SIZE):
@@ -83,6 +87,7 @@ class Bot(discord.Client):
         """
         Uploads a file to the channel and returns the ID of the message.
         """
+        size = data.getbuffer().nbytes
         message_ids = [
             (
                 await self.channel.send(
@@ -91,7 +96,7 @@ class Bot(discord.Client):
             ).id.__str__()
             for idx, d in enumerate(self._split_file(data))
         ]
-        await self.db.add_file(message_ids[0], file_name, message_ids)
+        await self.db.add_file(message_ids[0], file_name, size, message_ids)
         return message_ids[0]
 
     async def delete_file(self, id: str):
