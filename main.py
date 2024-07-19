@@ -7,12 +7,12 @@ import discord
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from starlette.types import Send
 
 import utils
 from bot import Bot
+from response import StreamingResponseWithStatusCode
 
 load_dotenv()
 
@@ -29,33 +29,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-templates = Jinja2Templates(directory="templates")
-
-
-origins = ["*"]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-class StreamingResponseWithStatusCode(StreamingResponse):
-    async def stream_response(self, send: Send) -> None:
-        try:
-            return await super().stream_response(send)
-        except discord.NotFound:
-            self.status_code = 410
-            await self.complete(send)
-        except Exception:
-            self.status_code = 500
-            await self.complete(send)
-
-    async def complete(self, send: Send) -> None:
-        await send({"type": "http.response.body", "body": b"", "more_body": False})
+templates = Jinja2Templates(directory="templates")
 
 
 @app.exception_handler(404)

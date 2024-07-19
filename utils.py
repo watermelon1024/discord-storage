@@ -1,6 +1,6 @@
 import mimetypes
-from urllib.parse import quote, urlparse  # noqa: F401
 import re
+from urllib.parse import quote, urlparse  # noqa: F401
 
 RE_ILLEGAL_FILENAME_CHARS = re.compile(r"[^a-zA-Z0-9\-\.\_]")
 
