@@ -5,15 +5,17 @@ from contextlib import asynccontextmanager
 import aiohttp
 import discord
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import RedirectResponse, Response, StreamingResponse
-from starlette.types import Send
+from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.templating import Jinja2Templates
+from starlette.types import Send
 
 import utils
 from bot import Bot
 
 load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,6 +29,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+templates = Jinja2Templates(directory="templates")
 
 
 origins = ["*"]
@@ -38,6 +41,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class StreamingResponseWithStatusCode(StreamingResponse):
     async def stream_response(self, send: Send) -> None:
@@ -69,7 +73,12 @@ async def exception_handler(request, exc):
     return Response("Oops! Something went wrong.", 500, media_type="text/plain")
 
 
-@app.post("/upload/file")
+@app.get("/")
+async def root(request: Request):
+    return templates.TemplateResponse(request=request, name="index.html")
+
+
+@app.post("/upload/file", response_class=HTMLResponse)
 async def route_upload_file(file: UploadFile):
     id, legalized_filename = await bot.upload_file(file.file, file.filename, file.size)
     return Response(

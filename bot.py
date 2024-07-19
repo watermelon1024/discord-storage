@@ -1,14 +1,13 @@
 import asyncio
 import io
 import os
+import uuid
 
 import discord
 
+import utils
 from cache import cache
 from database import Database
-import uuid
-
-import utils
 
 
 class Bot(discord.Client):
