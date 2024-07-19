@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import aiohttp
 import discord
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse, Response, StreamingResponse
 from starlette.types import Send
 
@@ -60,15 +60,15 @@ async def exception_handler(request, exc):
 
 
 @app.post("/upload/file")
-async def route_upload_file(file: UploadFile = File(...)):
-    id = await bot.upload_file(file.file, file.filename)
+async def route_upload_file(file: UploadFile):
+    id, legalized_filename = await bot.upload_file(file.file, file.filename)
     return Response(
-        f"File '{file.filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
+        f"File '{legalized_filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
     )
 
 
 @app.post("/upload/url")
-async def upload_url_route(url: str):
+async def route_upload_url(url: str):
     parsed_url = utils.urlparse(url)
     if not parsed_url.scheme or not parsed_url.netloc:
         return Response("Invalid URL.", 400, media_type="text/plain")
@@ -79,14 +79,19 @@ async def upload_url_route(url: str):
 
         data = await resp.read()
 
-    filename = parsed_url.path.split("/")[-1] or f"file{utils.guess_filename(resp.content_type)}"
-    id = await bot.upload_file(io.BytesIO(data), filename)
+    filename = (
+        resp.content_disposition.filename
+        or resp.url.path.split("/")[-1]
+        or f"file{utils.guess_filename(resp.content_type)}"
+    )
+    id, legalized_filename = await bot.upload_file(io.BytesIO(data), filename)
     return Response(
-        f"File '{filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
+        f"File '{legalized_filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
     )
 
 
-async def _get_attachment(id: str, filename: str, auto_media_type: bool = True):
+@app.get("/attachments/{id}/{filename}")
+async def route_attachments(id: str, filename: str):
     try:
         filename, size, file = await bot.get_file(id, filename)
     except (FileNotFoundError, discord.NotFound):
@@ -96,20 +101,18 @@ async def _get_attachment(id: str, filename: str, auto_media_type: bool = True):
 
     if isinstance(file, str):
         return RedirectResponse(file)
-    media_type = (
-        utils.guess_media_type(filename) if auto_media_type else "application/octet-stream"
-    )
-    return StreamingResponseWithStatusCode(file, media_type=media_type)
+
+    headers = {
+        "Content-Disposition": f"attachment; filename*=UTF-8''{utils.quote(filename)}",
+        "Content-Length": size,
+    }
+    return StreamingResponseWithStatusCode(file, headers=headers, media_type="application/octet-stream")
 
 
-@app.get("/attachments/{id}/{filename}")
-async def attachments_route(id: str, filename: str):
-    return await _get_attachment(id, filename, auto_media_type=False)
-
-
-@app.get("/view/{id}/{filename}")
-async def view_route(id: str, filename: str):
-    return await _get_attachment(id, filename)
+# TODO: rewrite with forntend
+# @app.get("/viewer/{id}/{filename}")
+# async def view_route(id: str, filename: str):
+#     ...
 
 
 if __name__ == "__main__":

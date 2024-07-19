@@ -6,6 +6,9 @@ import discord
 
 from cache import cache
 from database import Database
+import uuid
+
+import utils
 
 
 class Bot(discord.Client):
@@ -49,24 +52,26 @@ class Bot(discord.Client):
     async def _get_attachment(self, message_id: int):
         return (await self.get_or_fetch_message(message_id)).attachments[0]
 
-    async def get_file(self, id: str, file_name: str):
+    async def get_file(self, id: str, filename: str):
         """
         Gets a file from the database.
         """
-        file_name, size, message_ids = await self.db.get_file(id, file_name)
+        real_filename, legalized_filename, size, message_ids = await self.db.get_file(id)
+        if legalized_filename != filename:
+            raise FileNotFoundError(f"File '{filename}' not found.")
         try:
-            attachments = [await self._get_attachment(id) for id in message_ids]
+            attachments = [await self._get_attachment(mid) for mid in message_ids]
         except discord.NotFound as e:
-            await self.delete_file(message_ids[0])
-            for id in message_ids:
+            await self.delete_file(id)
+            for mid in message_ids:
                 try:
-                    await (await self.get_or_fetch_message(id)).delete()
+                    await (await self.get_or_fetch_message(mid)).delete()
                 except Exception:
                     pass
             raise e
 
         return (
-            file_name,
+            real_filename,
             size,
             (
                 (await self._get_attachment(message_ids[0])).url
@@ -83,21 +88,29 @@ class Bot(discord.Client):
                 break
             yield chunk
 
-    async def upload_file(self, data: io.BytesIO, file_name: str) -> str:
+    async def _upload_chunk(self, id: str, data: bytes):
+        max_retry = 10
+        for retry in range(max_retry + 1):
+            try:
+                return await self.channel.send(file=discord.File(io.BytesIO(data), id))
+            except Exception:
+                if retry == max_retry:
+                    raise
+        raise Exception("Failed to upload file")
+
+    async def upload_file(self, data: io.BytesIO, file_name: str) -> tuple[str, str]:
         """
-        Uploads a file to the channel and returns the ID of the message.
+        Uploads a file to the channel.
+
+        :returns: The file ID and the legalized filename
+        :rtype: tuple[str, str]
         """
         size = data.getbuffer().nbytes
-        message_ids = [
-            (
-                await self.channel.send(
-                    file=discord.File(io.BytesIO(d), f"{file_name}{f'.part{idx}' if idx else ''}")
-                )
-            ).id.__str__()
-            for idx, d in enumerate(self._split_file(data))
-        ]
-        await self.db.add_file(message_ids[0], file_name, size, message_ids)
-        return message_ids[0]
+        id = str(uuid.uuid4())
+        messages = await asyncio.gather(*(self._upload_chunk(id, d) for d in self._split_file(data)))
+        legalized_name = utils.legalize_filename(file_name)
+        await self.db.add_file(id, file_name, legalized_name, size, [str(m.id) for m in messages])
+        return id, legalized_name
 
     async def delete_file(self, id: str):
         """

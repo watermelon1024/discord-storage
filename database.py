@@ -23,45 +23,46 @@ class Database:
                 CREATE TABLE IF NOT EXISTS file (
                     id TEXT PRIMARY KEY,
                     name TEXT,
+                    legalized_name TEXT,
                     size TEXT,
                     message_ids TEXT
                 )
                 """
             )
 
-    async def add_file(self, id: str, name: str, size: int | str, message_ids: list[str]) -> None:
+    async def add_file(
+        self, id: str, name: str, legalized_name: str, size: int | str, message_ids: list[str]
+    ) -> None:
         """
         Adds a file to the database.
         """
         async with aiosqlite.connect(self.path) as db:
             await db.execute(
                 """
-                INSERT INTO file (id, name, size, message_ids)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO file (id, name, legalized_name, size, message_ids)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (id, name, size, ",".join(message_ids)),
+                (id, name, legalized_name, size, ",".join(message_ids)),
             )
             await db.commit()
 
-    async def get_file(self, id: str, file_name: str) -> tuple[str, str, list[str]]:
+    async def get_file(self, id: str) -> tuple[str, str, str, list[str]]:
         """
         Gets a file from the database.
 
-        :return: The name, size, and message IDs of the file.
-        :rtype: tuple[str, str, list[str]]
+        :return: The name, legalized name, and message IDs of the file.
+        :rtype: tuple[str, str, str, list[str]]
         """
         async with aiosqlite.connect(self.path) as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
-                """
-                SELECT * FROM file WHERE id = ? AND name = ?
-                """,
-                (id, file_name),
+                "SELECT * FROM file WHERE id = ?",
+                (id,),
             ) as cursor:
                 data = await cursor.fetchone()
                 if data is None:
                     raise FileNotFoundError(f"File '{id}' not found.")
-                return data["name"], data["size"], data["message_ids"].split(",")
+                return data["name"], data["legalized_name"], data["size"], data["message_ids"].split(",")
 
     async def delete_file(self, id: str) -> None:
         """
@@ -69,9 +70,7 @@ class Database:
         """
         async with aiosqlite.connect(self.path) as db:
             await db.execute(
-                """
-                DELETE FROM file WHERE id = ?
-                """,
+                "DELETE FROM file WHERE id = ?",
                 (id,),
             )
             await db.commit()
