@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body>
+  <div class="w-full h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center">
+    <div id="preview"
+      class="*:max-w-[32rem] *:max-h-[18rem] *:border flex flex-row *:p-4 m-2 items-center justify-center">
+      <p>Preview Here</p>
+    </div>
+    <div class="flex *:m-4">
+      <button id="select_file_button" class="dark:bg-gray-700 p-4 rounded">Open</button>
+      <button id="upload_button" class="dark:bg-gray-700 p-4 rounded">Upload</button>
+    </div>
+    <input type="file" id="file_input" hidden>
+    <div id="result_area">
+      <p>Result Here</p>
+    </div>
+  </div>
+  <script>
+    let select_file_button = document.getElementById('select_file_button');
+    let file_input = document.getElementById('file_input');
+    let preview = document.getElementById('preview');
+    let upload_button = document.getElementById('file');
+
+    select_file_button.addEventListener('click', function () {
+      file_input.click();
+    });
+
+    file_input.addEventListener('change', function () {
+      preview.innerHTML = '';
+      for (let i = 0; i < file_input.files.length; i++) {
+        let file = file_input.files[i];
+        const filetype = file.type;
+        const validImageTypes = ['image/gif', 'image/jpeg', 'image/png', 'image/jpg'];
+        if (validImageTypes.includes(filetype)) {
+          let img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          preview.appendChild(img);
+          continue;
+        }
+        const validVideoTypes = ['video/mp4', 'video/webm'];
+        if (validVideoTypes.includes(filetype)) {
+          let video = document.createElement('video');
+          video.src = URL.createObjectURL(file);
+          video.controls = true;
+          preview.appendChild(video);
+          continue;
+        }
+        const validAudioTypes = ['audio/mpeg', 'audio/ogg', 'audio/wav'];
+        if (validAudioTypes.includes(filetype)) {
+          let audio = document.createElement('audio');
+          audio.src = URL.createObjectURL(file);
+          audio.controls = true;
+          preview.appendChild(audio);
+          continue;
+        }
+        const validPdfTypes = ['application/pdf'];
+        if (validPdfTypes.includes(filetype)) {
+          let pdf = document.createElement('iframe');
+          pdf.src = URL.createObjectURL(file);
+          preview.appendChild(pdf);
+          continue;
+        }
+        let div = document.createElement('div')
+        div.innerHTML = file.name
+        preview.appendChild(div);
+      }
+    });
+
+    upload_button.addEventListener('click', function () {
+      let formData = new FormData();
+      file = file_input.files[0];
+      formData.append('file', file);
+      fetch(`${window.location.host}/upload/file`, {
+        method: 'POST',
+        body: formData
+      }).then(response => response.text()).then(data => {
+        document.getElementById('result_area').innerHTML = data;
+      });
+    });
+  </script>
+</body>
+
+</html>
