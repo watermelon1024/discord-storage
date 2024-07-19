@@ -10,11 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
+load_dotenv()
+
 import utils
 from bot import Bot
 from response import StreamingResponseWithStatusCode
-
-load_dotenv()
 
 
 @asynccontextmanager

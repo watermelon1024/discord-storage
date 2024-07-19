@@ -13,7 +13,7 @@ def convert_to_bytes(size_str: str) -> float:
         num, unit = match.groups()
         return float(num) * units[unit]
     else:
-        raise ValueError("Invalid size format. Please use the format like '50MB', '1GB', etc.")
+        raise ValueError(f"Invalid size format '{size_str}'. Please use the format like '50MB', '1GB', etc.")
 
 
 def convert_to_seconds(time_str: str) -> float:
@@ -24,7 +24,7 @@ def convert_to_seconds(time_str: str) -> float:
         num, unit = match.groups()
         return float(num) * units[unit]
     else:
-        raise ValueError("Invalid time format. Please use the format like '2h', '1d', etc.")
+        raise ValueError(f"Invalid time format '{time_str}'. Please use the format like '2h', '1d', etc.")
 
 
 CACHE_MAX_SIZE: float = convert_to_bytes(os.getenv("CACHE_MAX_SIZE") or "512MB")
