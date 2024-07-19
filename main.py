@@ -8,12 +8,12 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse, Response, StreamingResponse
 from starlette.types import Send
+from fastapi.middleware.cors import CORSMiddleware
 
 import utils
 from bot import Bot
 
 load_dotenv()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,6 +28,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class StreamingResponseWithStatusCode(StreamingResponse):
     async def stream_response(self, send: Send) -> None:
