@@ -21,16 +21,15 @@
     let path = window.location.pathname.split('/');
     let filename = path.pop();
     let id = path.pop();
-    console.log(`${window.location.host}/attachments/${id}/${filename}`);
     (async () => {
-      const fileReq = await fetch(`${window.location.host}/attachments/${id}/${filename}`)
+      const fileReq = await fetch(`/attachments/${id}/${filename}`)
       const download = document.getElementById('download');
       if (fileReq.status === 404) {
         document.getElementById('result').innerHTML = 'File not found';
         download.hidden = true;
         return;
       }
-      download.href = `${window.location.host}/attachments/${id}/${filename}`;
+      download.href = `/attachments/${id}/${filename}`;
       download.innerHTML = 'Download';
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
