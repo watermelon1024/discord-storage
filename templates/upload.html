@@ -18,7 +18,7 @@
       <button id="upload_button" class="dark:bg-gray-700 p-4 rounded">Upload</button>
     </div>
     <input type="file" id="file_input" hidden>
-    <div id="result_area">
+    <div id="result_area" class="flex flex-row *:border *:p-2 *:m-2">
       <p>Result Here</p>
     </div>
   </div>
@@ -80,8 +80,24 @@
       fetch(`/upload/file`, {
         method: 'POST',
         body: formData
-      }).then(response => response.text()).then(data => {
-        document.getElementById('result_area').innerHTML = data;
+      }).then(response => response.json()).then(data => {
+        document.getElementById('result_area').innerHTML = '';
+
+        if(!data.id) {
+          return;
+        }
+        const filename = data.filename
+        const id = data.id
+
+        const message = document.createElement('p');
+        message.innerHTML = 'File uploaded successfully';
+
+        const view = document.createElement('a');
+        view.href = `/view/${id}/${filename}`;
+        view.innerHTML = 'View online';
+
+        document.getElementById('result_area').appendChild(message);
+        document.getElementById('result_area').appendChild(view);
       });
     });
   </script>
