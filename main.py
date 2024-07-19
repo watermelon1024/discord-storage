@@ -56,7 +56,7 @@ async def exception_handler(request, exc):
 
 @app.get("/")
 async def root(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+    return templates.TemplateResponse(request=request, name="upload.html")
 
 
 @app.post("/upload/file", response_class=HTMLResponse)
@@ -109,10 +109,9 @@ async def route_attachments(id: str, filename: str):
     return StreamingResponseWithStatusCode(file, headers=headers, media_type="application/octet-stream")
 
 
-# TODO: rewrite with forntend
-# @app.get("/view/{id}/{filename}")
-# async def view_route(id: str, filename: str):
-#     ...
+@app.get("/view/{path:path}")
+async def view_route(request: Request):
+    return templates.TemplateResponse(request=request, name="view.html")
 
 
 if __name__ == "__main__":
