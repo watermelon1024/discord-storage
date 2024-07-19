@@ -19,9 +19,8 @@
   </div>
   <script>
     let path = window.location.pathname.split('/');
-    path.pop();
-    let id = path.pop();
     let filename = path.pop();
+    let id = path.pop();
     console.log(`${window.location.host}/attachments/${id}/${filename}`);
     (async () => {
       const fileReq = await fetch(`${window.location.host}/attachments/${id}/${filename}`)
