@@ -61,7 +61,7 @@ async def exception_handler(request, exc):
 
 @app.post("/upload/file")
 async def route_upload_file(file: UploadFile):
-    id, legalized_filename = await bot.upload_file(file.file, file.filename)
+    id, legalized_filename = await bot.upload_file(file.file, file.filename, file.size)
     return Response(
         f"File '{legalized_filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
     )
@@ -84,7 +84,7 @@ async def route_upload_url(url: str):
         or resp.url.path.split("/")[-1]
         or f"file{utils.guess_filename(resp.content_type)}"
     )
-    id, legalized_filename = await bot.upload_file(io.BytesIO(data), filename)
+    id, legalized_filename = await bot.upload_file(io.BytesIO(data), filename, len(data))
     return Response(
         f"File '{legalized_filename}' with ID {id} uploaded successfully.", 200, media_type="text/plain"
     )
@@ -110,7 +110,7 @@ async def route_attachments(id: str, filename: str):
 
 
 # TODO: rewrite with forntend
-# @app.get("/viewer/{id}/{filename}")
+# @app.get("/view/{id}/{filename}")
 # async def view_route(id: str, filename: str):
 #     ...
 

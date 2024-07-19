@@ -98,18 +98,20 @@ class Bot(discord.Client):
                     raise
         raise Exception("Failed to upload file")
 
-    async def upload_file(self, data: io.BytesIO, file_name: str) -> tuple[str, str]:
+    async def upload_file(self, data: io.BytesIO, name: str, size: int = None) -> tuple[str, str]:
         """
         Uploads a file to the channel.
 
         :returns: The file ID and the legalized filename
         :rtype: tuple[str, str]
         """
-        size = data.getbuffer().nbytes
+        if not size:
+            data.seek(0)
+            size = len(data.read())
         id = str(uuid.uuid4())
         messages = await asyncio.gather(*(self._upload_chunk(id, d) for d in self._split_file(data)))
-        legalized_name = utils.legalize_filename(file_name)
-        await self.db.add_file(id, file_name, legalized_name, size, [str(m.id) for m in messages])
+        legalized_name = utils.legalize_filename(name)
+        await self.db.add_file(id, name, legalized_name, size, [str(m.id) for m in messages])
         return id, legalized_name
 
     async def delete_file(self, id: str):
