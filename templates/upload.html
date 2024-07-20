@@ -18,7 +18,7 @@
       <button id="upload_button" class="dark:bg-gray-700 p-4 rounded">Upload</button>
     </div>
     <input type="file" id="file_input" hidden>
-    <div id="result_area" class="flex flex-row *:border *:p-2 *:m-2">
+    <div id="result_area" class="flex flex-col *:border *:p-2 *:m-2 *:text-center">
       <p>Result Here</p>
     </div>
   </div>
@@ -74,6 +74,8 @@
     });
 
     upload_button.addEventListener('click', function () {
+      const resultArea = document.getElementById('result_area')
+      resultArea.innerHTML = 'Uploading...';
       let formData = new FormData();
       file = file_input.files[0];
       formData.append('file', file);
@@ -81,7 +83,7 @@
         method: 'POST',
         body: formData
       }).then(response => response.json()).then(data => {
-        document.getElementById('result_area').innerHTML = '';
+        resultArea.innerHTML = '';
 
         if(!data.id) {
           return;
@@ -93,11 +95,11 @@
         message.innerHTML = 'File uploaded successfully';
 
         const view = document.createElement('a');
-        view.href = `/view/${id}/${filename}`;
         view.innerHTML = 'View online';
+        view.href = `/view/${id}/${filename}`;
 
-        document.getElementById('result_area').appendChild(message);
-        document.getElementById('result_area').appendChild(view);
+        resultArea.appendChild(message);
+        resultArea.appendChild(view);
       });
     });
   </script>
