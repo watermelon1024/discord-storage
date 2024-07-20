@@ -7,7 +7,7 @@ import discord
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 load_dotenv()
@@ -91,7 +91,7 @@ async def route_attachments(id: str, filename: str):
     try:
         filename, size, file = await bot.get_file(id, filename)
     except (FileNotFoundError, discord.NotFound):
-        return Response("This content is no longer available.", 410, media_type="text/plain")
+        return Response("This content is no longer available.", 404, media_type="text/plain")
     except Exception:
         return Response(status_code=500)
 
@@ -105,8 +105,14 @@ async def route_attachments(id: str, filename: str):
     return StreamingResponseWithStatusCode(file, headers=headers, media_type="application/octet-stream")
 
 
-@app.get("/view/{path:path}")
-async def view_route(request: Request):
+@app.get("/view/{id}/{filename}")
+async def view_route(request: Request, id: str, filename: str):
+    try:
+        await bot.check_file(id, filename)
+    except (FileNotFoundError, discord.NotFound):
+        return Response("This content is no longer available.", 404, media_type="text/plain")
+    except Exception:
+        return Response(status_code=500)
     return templates.TemplateResponse(request=request, name="view.html")
 
 

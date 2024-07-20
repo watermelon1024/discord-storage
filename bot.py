@@ -51,13 +51,34 @@ class Bot(discord.Client):
     async def _get_attachment(self, message_id: int):
         return (await self.get_or_fetch_message(message_id)).attachments[0]
 
+    async def check_file(self, id: str, filename: str = None):
+        """
+        Checks if the file exists.
+
+        :param id: The file ID
+        :type id: str
+        :param filename: The filename to check.
+        If filled, it will check if the filename matches the filename in database, or ignore filename check.
+        :type filename: Optional[str]
+
+        :return: Real filename, legalized filename, size, and message IDs
+        :rtype: tuple[str, str, int, list[str]]
+
+        :raises FileNotFoundError: If the file is not found.
+        """
+        real_filename, legalized_filename, size, message_ids = await self.db.get_file(id)
+        if filename is not None and legalized_filename != filename:
+            raise FileNotFoundError(f"File '{filename}' not found.")
+        return real_filename, legalized_filename, size, message_ids
+
     async def get_file(self, id: str, filename: str):
         """
         Gets a file from the database.
+
+        :return: Real filename, size, and download URL or attachments
+        :rtype: tuple[str, int, str | AsyncGenerator[bytes]]
         """
-        real_filename, legalized_filename, size, message_ids = await self.db.get_file(id)
-        if legalized_filename != filename:
-            raise FileNotFoundError(f"File '{filename}' not found.")
+        real_filename, legalized_filename, size, message_ids = await self.check_file(id, filename)
         try:
             attachments = [await self._get_attachment(mid) for mid in message_ids]
         except discord.NotFound as e:
