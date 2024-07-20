@@ -75,8 +75,8 @@ class Bot(discord.Client):
         """
         Gets a file from the database.
 
-        :return: Real filename, size, and download URL or attachments
-        :rtype: tuple[str, int, str | AsyncGenerator[bytes]]
+        :return: Real filename, size and file combine generator.
+        :rtype: tuple[str, int, AsyncGenerator[bytes]]
         """
         real_filename, legalized_filename, size, message_ids = await self.check_file(id, filename)
         try:
@@ -90,15 +90,7 @@ class Bot(discord.Client):
                     pass
             raise e
 
-        return (
-            real_filename,
-            size,
-            (
-                (await self._get_attachment(message_ids[0])).url
-                if len(attachments) == 1
-                else self._combine_file(attachments)
-            ),
-        )
+        return real_filename, size, self._combine_file(attachments)
 
     def _split_file(self, data: io.BytesIO, max_size: int = DEFAULT_MAX_SIZE):
         data.seek(0)

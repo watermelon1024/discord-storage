@@ -95,9 +95,6 @@ async def route_attachments(id: str, filename: str):
     except Exception:
         return Response(status_code=500)
 
-    if isinstance(file, str):
-        return RedirectResponse(file)
-
     headers = {
         "Content-Disposition": f"attachment; filename*=UTF-8''{utils.quote(filename)}",
         "Content-Length": size,
