@@ -102,7 +102,7 @@ async def route_attachments(id: str, filename: str):
         "Content-Disposition": f"attachment; filename*=UTF-8''{utils.quote(filename)}",
         "Content-Length": size,
     }
-    return StreamingResponseWithStatusCode(file, headers=headers, media_type="application/octet-stream")
+    return StreamingResponseWithStatusCode(file, headers=headers, media_type=utils.guess_mime_type(filename))
 
 
 @app.get("/view/{id}/{filename}")

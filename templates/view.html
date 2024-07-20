@@ -33,23 +33,24 @@
       download.innerHTML = 'Download';
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
-      if (['jpg','png','jpeg','gif'].includes(filename.split('.').pop())) {
+      const fileType = file.type;
+      if (fileType.startsWith('image')) {
         const img = document.createElement('img');
         img.src = url;
         document.getElementById('preview').appendChild(img);
-      } else if (['mp4','webm'].includes(filename.split('.').pop())) {
+      } else if (fileType.startsWith('video')) {
         const video = document.createElement('video');
         video.src = url;
         video.controls = true;
         document.getElementById('preview').appendChild(video);
-      } else if (['mp3','ogg','wav'].includes(filename.split('.').pop())) {
+      } else if (fileType.startsWith('audio')) {
         const audio = document.createElement('audio');
         audio.src = url;
         audio.controls = true;
         document.getElementById('preview').appendChild(audio);
       } else {
         const p = document.createElement('p');
-        p.innerHTML = filename;
+        p.innerHTML = `Cannot preview ${filename}`;
         document.getElementById('preview').appendChild(p);
       }
     })();

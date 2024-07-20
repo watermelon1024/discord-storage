@@ -10,7 +10,7 @@ def guess_filename(content_type: str):
     return extension or ""
 
 
-def guess_media_type(file_name: str):
+def guess_mime_type(file_name: str):
     mime_type, _ = mimetypes.guess_type(file_name)
     return mime_type or "application/octet-stream"
 
