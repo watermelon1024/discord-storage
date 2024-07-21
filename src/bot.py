@@ -19,8 +19,8 @@ class Bot(discord.Client):
         channel_id = int(os.getenv("CHANNEL"))
         self.channel = self.get_channel(channel_id) or await self.fetch_channel(channel_id)
 
-        db_path = os.getenv("DB_PATH") or "storage/database.db"
-        self.db = Database(db_path)
+        self.attachments_cache: dict[str, tuple[asyncio.Task[bytes]]] = {}
+        self.db = Database(os.getenv("DB_PATH") or "storage/database.db")
         await self.db.initialize()
 
         print(f"Logged in as {self.user} (ID: {self.user.id})")
@@ -37,17 +37,6 @@ class Bot(discord.Client):
 
     async def get_or_fetch_message(self, message_id: int) -> discord.Message:
         return self.get_message(message_id) or await self.channel.fetch_message(message_id)
-
-    @cache
-    async def _read_attachment(self, attachment: discord.Attachment):
-        return await attachment.read()
-
-    async def _combine_file(self, attachments: list[discord.Attachment]):
-        """
-        Combine the file from the attachments.
-        """
-        for attachment in attachments:
-            yield await self._read_attachment(attachment)
 
     async def _get_attachment(self, message_id: int):
         return (await self.get_or_fetch_message(message_id)).attachments[0]
@@ -91,7 +80,14 @@ class Bot(discord.Client):
                     pass
             raise e
 
-        return real_filename, size, self._combine_file(attachments)
+        if self.attachments_cache.get(id) is None:
+            self.attachments_cache[id] = [asyncio.create_task(a.read()) for a in attachments]
+
+        async def combine():
+            for task in self.attachments_cache[id]:
+                yield await task
+
+        return real_filename, size, combine()
 
     async def _split_file(self, data: UploadFile, max_size: int = DEFAULT_MAX_SIZE):
         """
