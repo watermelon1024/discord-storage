@@ -75,14 +75,35 @@ class Bot(discord.Client):
             raise FileNotFoundError(f"File '{filename}' not found.")
         return real_filename, legalized_filename, size, message_ids
 
-    async def get_file(self, id: str, filename: str):
+    async def get_file(self, id: str, filename: str, start: int = 0, interval: int = None):
         """
         Gets a file from the database.
+
+        :param id: The file ID
+        :type id: str
+        :param filename: The filename to get.
+        :type filename: str
+        :param start: The start index of the file chunk.
+        :type start: int
+        :param interval: The number of bytes to get.
+        :type interval: int
 
         :return: Real filename, size and file combine generator.
         :rtype: tuple[str, int, AsyncGenerator[bytes]]
         """
+        # get file info
         real_filename, legalized_filename, size, message_ids = await self.check_file(id, filename)
+
+        # check cache
+        data = await self.file_cache.get(id, start, interval)
+        if data is not None:
+
+            def combine(data: bytes):
+                yield data
+
+            return real_filename, size, combine(data)
+
+        # get from cloud
         try:
             attachments = [await self._get_attachment(mid) for mid in message_ids]
         except discord.NotFound as e:

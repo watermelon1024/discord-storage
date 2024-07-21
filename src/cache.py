@@ -89,7 +89,7 @@ class SQLiteCache:
             await db.execute(
                 f"""
                 DELETE FROM cache
-                WHERE key IN ({", ".join(to_delete)})
+                WHERE key IN ({", ".join(f"'{s}'" for s in to_delete)})
                 """
             )
             await db.execute("VACUME cache")
@@ -122,13 +122,29 @@ class SQLiteCache:
             await db.commit()
         asyncio.create_task(self._evict_if_needed())
 
-    async def get(self, key: str) -> bytes:
+    async def get(self, key: str, start: int = 0, interval: int = None) -> bytes:
         """
         Get the value associated with the given key from the cache
+
+        :param key: The key to retrieve
+        :type key: str
+        :param start: The start index of the value to retrieve (optional)
+        :type start: int
+        :param interval: The number of bytes to retrieve (optional)
+        :type interval: int
+
+        :return: The value associated with the key, or None if the key is not found
+        :rtype: bytes or None
         """
         async with aiosqlite.connect(self.path) as db:
             db.row_factory = aiosqlite.Row
-            async with db.execute("SELECT value FROM cache WHERE key = ?", (key,)) as cursor:
+            if start and not interval:
+                value = f"substr(value, {start}, LENGTH(value) - {start}) as value"
+            elif start and interval:
+                value = f"substr(value, {start}, {interval}) as value"
+            else:
+                value = "value"
+            async with db.execute(f"SELECT {value} FROM cache WHERE key = ?", (key,)) as cursor:
                 row = await cursor.fetchone()
                 if row:
                     value = row["value"]
