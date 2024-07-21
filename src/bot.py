@@ -5,9 +5,9 @@ import uuid
 
 import discord
 
-import utils
-from cache import cache
-from database import Database
+from . import utils
+from .cache import cache
+from .database import Database
 
 
 class Bot(discord.Client):
