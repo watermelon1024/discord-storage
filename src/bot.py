@@ -7,7 +7,7 @@ import discord
 from fastapi import UploadFile
 
 from . import utils
-from .cache import cache
+from .cache import SQLiteCache
 from .database import Database
 
 
@@ -19,9 +19,11 @@ class Bot(discord.Client):
         channel_id = int(os.getenv("CHANNEL"))
         self.channel = self.get_channel(channel_id) or await self.fetch_channel(channel_id)
 
-        self.attachments_cache: dict[str, tuple[asyncio.Task[bytes]]] = {}
+        self.attachments_cache: dict[str, list[asyncio.Task[bytes]]] = {}
         self.db = Database(os.getenv("DB_PATH") or "storage/database.db")
         await self.db.initialize()
+        self.file_cache = SQLiteCache(os.getenv("CACHE_PATH") or ".cache/cache.db")
+        await self.file_cache.initialize()
 
         print(f"Logged in as {self.user} (ID: {self.user.id})")
 
@@ -40,6 +42,18 @@ class Bot(discord.Client):
 
     async def _get_attachment(self, message_id: int):
         return (await self.get_or_fetch_message(message_id)).attachments[0]
+
+    async def _combine(self, tasks: list[asyncio.Task[bytes]]):
+        for task in tasks:
+            yield await task
+
+    async def _first_combine(self, id: str, tasks: list[asyncio.Task[bytes]]):
+        data = b""
+        for task in tasks:
+            d = await task
+            yield d
+            data += d
+        self.loop.create_task(self.file_cache.set(id, data))
 
     async def check_file(self, id: str, filename: str = None):
         """
@@ -80,14 +94,14 @@ class Bot(discord.Client):
                     pass
             raise e
 
-        if self.attachments_cache.get(id) is None:
-            self.attachments_cache[id] = [asyncio.create_task(a.read()) for a in attachments]
+        tasks = self.attachments_cache.get(id)
+        if tasks is None:
+            self.attachments_cache[id] = tasks = [asyncio.create_task(a.read()) for a in attachments]
+            combine = self._first_combine(id, tasks)
+        else:
+            combine = self._combine(tasks)
 
-        async def combine():
-            for task in self.attachments_cache[id]:
-                yield await task
-
-        return real_filename, size, combine()
+        return real_filename, size, combine
 
     async def _split_file(self, data: UploadFile, max_size: int = DEFAULT_MAX_SIZE):
         """
