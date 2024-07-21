@@ -53,7 +53,11 @@ class Bot(discord.Client):
             d = await task
             yield d
             data += d
-        self.loop.create_task(self.file_cache.set(id, data))
+        self.loop.create_task(self.set_file_cache(id, data))
+
+    async def set_file_cache(self, id: str, data: bytes):
+        await self.file_cache.set(id, data)
+        self.attachments_cache.pop(id, None)
 
     async def check_file(self, id: str, filename: str = None):
         """
@@ -89,7 +93,7 @@ class Bot(discord.Client):
         :type interval: int
 
         :return: Real filename, size and file combine generator.
-        :rtype: tuple[str, int, AsyncGenerator[bytes]]
+        :rtype: tuple[str, str, AsyncGenerator[bytes]]
         """
         # get file info
         real_filename, legalized_filename, size, message_ids = await self.check_file(id, filename)
@@ -98,10 +102,10 @@ class Bot(discord.Client):
         data = await self.file_cache.get(id, start, interval)
         if data is not None:
 
-            def combine(data: bytes):
+            async def combine(data: bytes):
                 yield data
 
-            return real_filename, size, combine(data)
+            return real_filename, str(len(data)), combine(data)
 
         # get from cloud
         try:

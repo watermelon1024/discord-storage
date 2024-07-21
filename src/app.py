@@ -82,27 +82,33 @@ async def route_upload_url(url: str):
 
 
 @app.get("/attachments/{id}/{filename}")
-async def route_attachments(id: str, filename: str):
+async def route_attachments(request: Request, id: str, filename: str):
+    # get range
+    _range = request.headers.get("Range")
+    if _range:
+        start, end = utils.parse_request_range(_range)
+        if end is not None:
+            interval = int(end) - int(start) + 1
+        else:
+            interval = None
+    else:
+        start, end, interval = 0, None, None
+    # fetch data
     try:
-        filename, size, file = await bot.get_file(id, filename)
+        filename, size, file = await bot.get_file(id, filename, start, interval)
     except (FileNotFoundError, discord.NotFound):
         return Response("This content is no longer available.", 404, media_type="text/plain")
     except Exception:
         return Response(status_code=500)
 
-    headers = {
-        "Content-Disposition": f"attachment; filename*=UTF-8''{utils.quote(filename)}",
-        "Content-Length": size,
-    }
+    headers = {"Content-Disposition": f"inline; filename*=UTF-8''{utils.quote(filename)}"}
+    if _range:
+        headers["Content-Length"] = size
+        headers["Content-Range"] = f"bytes {start}-{end or (int(size) - 1)}/{size}"
+
     return StreamingResponseWithStatusCode(file, headers=headers, media_type=utils.guess_mime_type(filename))
 
 
-@app.get("/view/{id}/{filename}")
-async def view_route(request: Request, id: str, filename: str):
-    try:
-        await bot.check_file(id, filename)
-    except (FileNotFoundError, discord.NotFound):
-        return Response("This content is no longer available.", 404, media_type="text/plain")
-    except Exception:
-        return Response(status_code=500)
+@app.get("/view/{path:path}")
+async def view_route(request: Request):
     return templates.TemplateResponse(request=request, name="view.html")

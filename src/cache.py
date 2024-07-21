@@ -50,7 +50,7 @@ class SQLiteCache:
                 CREATE TABLE IF NOT EXISTS cache (
                     key TEXT PRIMARY KEY,
                     value BLOB,
-                    size INTEGER,
+                    size TEXT,
                     expiration_time INTEGER,
                     last_access_time INTEGER
                 )
