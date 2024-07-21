@@ -101,7 +101,7 @@ async def route_attachments(request: Request, id: str, filename: str):
     except Exception:
         return Response(status_code=500)
 
-    headers = {"Content-Disposition": f"inline; filename*=UTF-8''{utils.quote(filename)}"}
+    headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{utils.quote(filename)}"}
     if _range:
         headers["Content-Length"] = size
         headers["Content-Range"] = f"bytes {start}-{end or (int(size) - 1)}/{size}"
