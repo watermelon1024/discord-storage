@@ -1,4 +1,3 @@
-import io
 import os
 from contextlib import asynccontextmanager
 
@@ -58,7 +57,7 @@ async def root(request: Request):
 
 @app.post("/upload/file", response_class=HTMLResponse)
 async def route_upload_file(file: UploadFile):
-    id, legalized_filename = await bot.upload_file(file.file, file.filename, file.size)
+    id, legalized_filename = await bot.upload_file(file, file.filename, file.size)
     return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
 
 
@@ -72,14 +71,13 @@ async def route_upload_url(url: str):
         if not resp.ok:
             return JSONResponse({"message": "Invalid URL."}, status_code=400)
 
-        data = await resp.read()
+        filename = (
+            resp.content_disposition.filename
+            or resp.url.path.split("/")[-1]
+            or f"file{utils.guess_filename(resp.content_type)}"
+        )
+        id, legalized_filename = await bot.upload_file(resp.content, filename)
 
-    filename = (
-        resp.content_disposition.filename
-        or resp.url.path.split("/")[-1]
-        or f"file{utils.guess_filename(resp.content_type)}"
-    )
-    id, legalized_filename = await bot.upload_file(io.BytesIO(data), filename, len(data))
     return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
 
 

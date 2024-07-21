@@ -4,6 +4,7 @@ import os
 import uuid
 
 import discord
+from fastapi import UploadFile
 
 from . import utils
 from .cache import cache
@@ -92,36 +93,57 @@ class Bot(discord.Client):
 
         return real_filename, size, self._combine_file(attachments)
 
-    def _split_file(self, data: io.BytesIO, max_size: int = DEFAULT_MAX_SIZE):
-        data.seek(0)
-        while True:
-            chunk = data.read(max_size)
-            if not chunk:
-                break
-            yield chunk
+    async def _split_file(self, data: UploadFile, max_size: int = DEFAULT_MAX_SIZE):
+        """
+        Splits a file into chunks of a maximum size.
 
-    async def _upload_chunk(self, id: str, data: bytes):
+        :return: The index of the chunk and the chunk data.
+        :rtype: AsyncGenerator[int, bytes]
+        """
+        idx = 0
+        sizes = 0
+        chunks = b""
+        while True:
+            chunk = await data.read(max_size)
+            if not chunk:
+                yield idx, chunks
+                break
+            size = len(chunk)
+            if size + sizes > max_size:
+                yield idx, chunks
+                idx += 1
+                sizes = 0
+                chunks = b""
+
+            sizes += size
+            chunks += chunk
+
+    async def _upload_chunk(self, id: str, idx: int, data: bytes):
         max_retry = 10
         for retry in range(max_retry + 1):
             try:
-                return await self.channel.send(file=discord.File(io.BytesIO(data), id))
+                return idx, await self.channel.send(file=discord.File(io.BytesIO(data), id))
             except Exception:
                 if retry == max_retry:
                     raise
         raise Exception("Failed to upload file")
 
-    async def upload_file(self, data: io.BytesIO, name: str, size: int = None) -> tuple[str, str]:
+    async def upload_file(self, data: UploadFile, name: str, size: int = None) -> tuple[str, str]:
         """
         Uploads a file to the channel.
 
         :returns: The file ID and the legalized filename
         :rtype: tuple[str, str]
         """
-        if not size:
-            data.seek(0)
-            size = len(data.read())
         id = str(uuid.uuid4())
-        messages = await asyncio.gather(*(self._upload_chunk(id, d) for d in self._split_file(data)))
+
+        tasks: list[asyncio.Task[tuple[int, discord.Message]]] = []
+        async for idx, d in self._split_file(data):
+            tasks.append(asyncio.create_task(self._upload_chunk(id, idx, d)))
+        done, pending = await asyncio.wait(tasks)
+        messages = [r[1] for r in sorted((t.result() for t in done), key=lambda x: x[0])]
+        if not size:
+            size = sum(m.attachments[0].size for m in messages)
         legalized_name = utils.legalize_filename(name)
         await self.db.add_file(id, name, legalized_name, size, [str(m.id) for m in messages])
         return id, legalized_name
