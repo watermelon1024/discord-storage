@@ -2,12 +2,12 @@ import os
 
 from dotenv import load_dotenv
 
+from src.app import app
+
 load_dotenv()
 
 if __name__ == "__main__":
     import uvicorn
-
-    from src.app import app
 
     try:
         uvicorn.run(
