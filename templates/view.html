@@ -20,13 +20,13 @@
   </div>
   <script>
     let path = window.location.pathname.split('/');
-    let filename = 'BOFXVIfeat.65Smh8rwdJI.webm';//path.pop();//
-    let id = '2340fbbe-60f2-4e69-a81c-f42aab879aa5';//path.pop();
+    let filename = path.pop();
+    let id = path.pop();
     (async () => {
       if (!id || !filename || id === '' || filename === '') {
         return;
       }
-      const fileReq = await fetch(`https://cdn.pikacnu.com/attachments/${id}/${filename}`);
+      const fileReq = await fetch(`/attachments/${id}/${filename}`);
       
       for(const [key, value] of fileReq.headers.entries()) {
         console.log(`${key}: ${value}`);
