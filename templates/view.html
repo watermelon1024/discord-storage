@@ -10,10 +10,8 @@
 <body>
   <div class="w-full min-h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center">
     <div id="preview"
-      class="*:max-w-[80%] *:border flex flex-row *:p-4 m-2 items-center justify-center">
-    </div>
-    <div id="result" class="*:border">
-
+      class="*:max-w-[90%] *:border flex flex-row *:p-4 m-2 items-center justify-center">
+      <p id="loading">Loading...</p>
     </div>
     <a href="" id="download"></a>
   </div>
@@ -22,10 +20,18 @@
     let filename = path.pop();
     let id = path.pop();
     (async () => {
-      const fileReq = await fetch(`/attachments/${id}/${filename}`)
+      const fileReq = await fetch(`/attachments/${id}/${filename}`);
       const download = document.getElementById('download');
-      if (fileReq.status === 404) {
-        document.getElementById('result').innerHTML = 'File not found';
+      const previewBox = document.getElementById('preview');
+      if (!fileReq.ok) {
+        const status = fileReq.status;
+        let previewText;
+        if (fileReq.status === 400) {
+          previewText = 'File not found';
+        } else {
+          previewText = 'Fail to load file';
+        }
+        previewBox.innerHTML = previewText;
         download.hidden = true;
         return;
       }
@@ -34,24 +40,25 @@
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
       const fileType = file.type;
+      previewBox.innerHTML = '';
       if (fileType.startsWith('image')) {
         const img = document.createElement('img');
         img.src = url;
-        document.getElementById('preview').appendChild(img);
+        previewBox.appendChild(img);
       } else if (fileType.startsWith('video')) {
         const video = document.createElement('video');
         video.src = url;
         video.controls = true;
-        document.getElementById('preview').appendChild(video);
+        previewBox.appendChild(video);
       } else if (fileType.startsWith('audio')) {
         const audio = document.createElement('audio');
         audio.src = url;
         audio.controls = true;
-        document.getElementById('preview').appendChild(audio);
+        previewBox.appendChild(audio);
       } else {
         const p = document.createElement('p');
         p.innerHTML = `Cannot preview ${filename}`;
-        document.getElementById('preview').appendChild(p);
+        previewBox.appendChild(p);
       }
     })();
   </script>
