@@ -28,9 +28,7 @@
       }
       const fileReq = await fetch(`/attachments/${id}/${filename}`);
       
-      for(const [key, value] of fileReq.headers.entries()) {
-        console.log(`${key}: ${value}`);
-      }
+      const realFilename = decodeURI(fileReq.headers.get("content-disposition").split('%')[1]);
       const download = document.getElementById('download');
       const previewBox = document.getElementById('preview');
       if (!fileReq.ok) {
@@ -50,7 +48,7 @@
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
       const fileType = file.type;
-      document.getElementById('filename_display').innerHTML = fileReq.headers.get("content-disposition");
+      document.getElementById('filename_display').innerHTML = realFilename;
       document.getElementById('top_bar').classList.remove('opacity-0');
       previewBox.innerHTML = '';
       if (fileType.startsWith('image')) {
@@ -69,7 +67,7 @@
         previewBox.appendChild(audio);
       } else {
         const p = document.createElement('p');
-        p.innerHTML = `Cannot preview ${filename}`;
+        p.innerHTML = `Cannot preview ${realFilename}`;
         previewBox.appendChild(p);
       }
     })();
