@@ -10,7 +10,7 @@
 <body>
   <div class="w-full h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center">
     <div id="preview"
-      class="*:max-w-[32rem] *:max-h-[18rem] *:border flex flex-row *:p-4 m-2 items-center justify-center">
+      class="*:max-w-[32rem] *:max-h-[18rem] w-full *:border flex flex-row flex-warp *:p-4 m-2 items-center justify-center">
       <p>Preview Here</p>
     </div>
     <div class="flex *:m-4">
@@ -28,6 +28,7 @@
     const selectFileButton = document.getElementById('select_file_button');
     const uploadButton = document.getElementById('upload_button');
     const maxFileCount = 20;
+    const resultArea = document.getElementById('result_area')
 
     selectFileButton.addEventListener('click', () => {
       fileInput.click();
@@ -57,10 +58,10 @@
           audio.src = URL.createObjectURL(file);
           audio.controls = true;
           previewBox.appendChild(audio);
-        } else if (fileType.startsWith('application')) {
-          let iframe = document.createElement('iframe');
-          iframe.src = URL.createObjectURL(file);
-          previewBox.appendChild(iframe);
+        } else if (fileType == 'application/pdf') {
+          let pdf = document.createElement('iframe');
+          pdf.src = URL.createObjectURL(file);
+          previewBox.appendChild(pdf);
         } else {
           let div = document.createElement('div')
           div.innerHTML = file.name
@@ -69,34 +70,35 @@
       }
     });
 
-    uploadButton.addEventListener('click', function () {
-      const resultArea = document.getElementById('result_area')
+    uploadButton.addEventListener('click', () => {
       resultArea.innerHTML = 'Uploading...';
-      let formData = new FormData();
-      file = fileInput.files[0];
-      formData.append('file', file);
-      fetch(`/upload/file`, {
-        method: 'POST',
-        body: formData
-      }).then(response => response.json()).then(data => {
-        resultArea.innerHTML = '';
+      let fileCount = fileInput.files.length;
+      for (let i = 0; i < (fileCount < maxFileCount ? fileCount : maxFileCount); i++) {
+        file = file_input.files[i];
+        formData.append('file', file);
+        fetch(`/upload/file`, {
+          method: 'POST',
+          body: formData
+        }).then(response => response.json()).then(data => {
+          resultArea.innerHTML = '';
 
-        if(!data.id) {
-          return;
-        }
-        const filename = data.filename
-        const id = data.id
+          if (!data.id) {
+            return;
+          }
+          const filename = data.filename
+          const id = data.id
 
-        const message = document.createElement('p');
-        message.innerHTML = 'File uploaded successfully';
+          const message = document.createElement('p');
+          message.innerHTML = 'File uploaded successfully';
 
-        const view = document.createElement('a');
-        view.innerHTML = 'View online';
-        view.href = `/view/${id}/${filename}`;
+          const view = document.createElement('a');
+          view.innerHTML = 'View online';
+          view.href = `/view/${id}/${filename}`;
 
-        resultArea.appendChild(message);
-        resultArea.appendChild(view);
-      });
+          resultArea.appendChild(message);
+          resultArea.appendChild(view);
+        });
+      }
     });
   </script>
 </body>
