@@ -10,8 +10,8 @@
 <body>
   <div class="w-full min-h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center relative">
     <div id="top_bar"
-      class="flex flex-row w-[95%] p-2 justify-between fixed top-0 m-8 opacity-0 shadow-inner rounded-full shadow-gray-700 *:p-2 items-center bg-[rgba(0,0,0,0.7)]">
-      <h1 class="text-2xl" id="filename_display"></h1>
+      class="flex flex-row w-[95%] fixed hover:opacity-90 transition-all delay-200 p-2 justify-between top-0 opacity-0 shadow-inner rounded-xl shadow-gray-700 *:p-2 items-center bg-[rgba(0,0,0,0.7)]">
+      <h1 class="text-xl" id="filename_display"></h1>
       <a href="" id="download"></a>
     </div>
     <div id="preview" class="*:max-w-[90%] *:border flex flex-row *:p-4 m-2 items-center justify-center">
@@ -49,7 +49,7 @@
       const url = URL.createObjectURL(file);
       const fileType = file.type;
       document.getElementById('filename_display').innerHTML = realFilename;
-      document.getElementById('top_bar').classList.remove('opacity-0');
+      document.getElementById('top_bar').classList.remove('hidden');
       previewBox.innerHTML = '';
       if (fileType.startsWith('image')) {
         const img = document.createElement('img');
