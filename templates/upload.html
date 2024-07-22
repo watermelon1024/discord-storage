@@ -23,67 +23,57 @@
     </div>
   </div>
   <script>
-    const max_file_count = 20;
-    let select_file_button = document.getElementById('select_file_button');
-    let file_input = document.getElementById('file_input');
-    let preview = document.getElementById('preview');
-    let upload_button = document.getElementById('upload_button');
+    const previewBox = document.getElementById('preview');
+    const fileInput = document.getElementById('file_input');
+    const selectFileButton = document.getElementById('select_file_button');
+    const uploadButton = document.getElementById('upload_button');
+    const maxFileCount = 20;
 
-    select_file_button.addEventListener('click', function () {
-      file_input.click();
+    selectFileButton.addEventListener('click', () => {
+      fileInput.click();
     });
 
-    file_input.addEventListener('change', function () {
-      preview.innerHTML = '';
-      let file_count = file_input.files.length;
-      if (file_count > max_file_count) {
-        alert(`最高同時上傳數量為 ${max_file_count} 個檔案，超過的將捨棄`);
-        file_count = max_file_count;
+    fileInput.addEventListener('change', () => {
+      previewBox.innerHTML = '';
+      let fileCount = fileInput.files.length;
+      if (fileCount > maxFileCount) {
+        alert(`最高同時上傳數量為 ${maxFileCount} 個檔案，超過的將捨棄`);
+        fileCount = maxFileCount;
       }
-      for (let i = 0; i < file_count; i++) {
-        let file = file_input.files[i];
-        const filetype = file.type;
-        const validImageTypes = ['image/gif', 'image/jpeg', 'image/png', 'image/jpg'];
-        if (validImageTypes.includes(filetype)) {
+      for (let i = 0; i < fileCount; i++) {
+        let file = fileInput.files[i];
+        const fileType = file.type;
+        if (fileType.startsWith('image')) {
           let img = document.createElement('img');
           img.src = URL.createObjectURL(file);
-          preview.appendChild(img);
-          continue;
-        }
-        const validVideoTypes = ['video/mp4', 'video/webm'];
-        if (validVideoTypes.includes(filetype)) {
+          previewBox.appendChild(img);
+        } else if (fileType.startsWith('video')) {
           let video = document.createElement('video');
           video.src = URL.createObjectURL(file);
           video.controls = true;
-          preview.appendChild(video);
-          continue;
-        }
-        const validAudioTypes = ['audio/mpeg', 'audio/ogg', 'audio/wav'];
-        if (validAudioTypes.includes(filetype)) {
+          previewBox.appendChild(video);
+        } else if (fileType.startsWith('audio')) {
           let audio = document.createElement('audio');
           audio.src = URL.createObjectURL(file);
           audio.controls = true;
-          preview.appendChild(audio);
-          continue;
+          previewBox.appendChild(audio);
+        } else if (fileType.startsWith('application')) {
+          let iframe = document.createElement('iframe');
+          iframe.src = URL.createObjectURL(file);
+          previewBox.appendChild(iframe);
+        } else {
+          let div = document.createElement('div')
+          div.innerHTML = file.name
+          previewBox.appendChild(div);
         }
-        const validPdfTypes = ['application/pdf'];
-        if (validPdfTypes.includes(filetype)) {
-          let pdf = document.createElement('iframe');
-          pdf.src = URL.createObjectURL(file);
-          preview.appendChild(pdf);
-          continue;
-        }
-        let div = document.createElement('div')
-        div.innerHTML = file.name
-        preview.appendChild(div);
       }
     });
 
-    upload_button.addEventListener('click', function () {
+    uploadButton.addEventListener('click', function () {
       const resultArea = document.getElementById('result_area')
       resultArea.innerHTML = 'Uploading...';
       let formData = new FormData();
-      file = file_input.files[0];
+      file = fileInput.files[0];
       formData.append('file', file);
       fetch(`/upload/file`, {
         method: 'POST',
