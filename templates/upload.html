@@ -10,7 +10,7 @@
 <body>
   <div class="w-full h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center">
     <div id="preview"
-      class="*:max-w-[32rem] *:max-h-[18rem] w-full *:border flex flex-row flex-warp *:p-4 m-2 items-center justify-center">
+      class="*:max-w-[32rem] *:max-h-[18rem] *:border flex flex-row flex-wrap *:p-4 m-2 items-center justify-center">
       <p>Preview Here</p>
     </div>
     <div class="flex *:m-4">
@@ -70,18 +70,16 @@
       }
     });
 
-    uploadButton.addEventListener('click', () => {
+    uploadButton.addEventListener('click',async () => {
       resultArea.innerHTML = 'Uploading...';
       let fileCount = fileInput.files.length;
       for (let i = 0; i < (fileCount < maxFileCount ? fileCount : maxFileCount); i++) {
         file = file_input.files[i];
         formData.append('file', file);
-        fetch(`/upload/file`, {
+        await fetch(`/upload/file`, {
           method: 'POST',
           body: formData
         }).then(response => response.json()).then(data => {
-          resultArea.innerHTML = '';
-
           if (!data.id) {
             return;
           }

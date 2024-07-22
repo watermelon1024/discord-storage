@@ -8,19 +8,29 @@
 </head>
 
 <body>
-  <div class="w-full min-h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center">
-    <div id="preview"
-      class="*:max-w-[90%] *:border flex flex-row *:p-4 m-2 items-center justify-center">
+  <div class="w-full min-h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center relative">
+    <div id="top_bar"
+      class="flex flex-row w-[95%] p-2 justify-between fixed top-0 m-8 opacity-0 shadow-inner rounded-full shadow-gray-700 *:p-2 items-center bg-[rgba(0,0,0,0.7)]">
+      <h1 class="text-2xl" id="filename_display"></h1>
+      <a href="" id="download"></a>
+    </div>
+    <div id="preview" class="*:max-w-[90%] *:border flex flex-row *:p-4 m-2 items-center justify-center">
       <p id="loading">Loading...</p>
     </div>
-    <a href="" id="download"></a>
   </div>
   <script>
     let path = window.location.pathname.split('/');
     let filename = path.pop();
     let id = path.pop();
     (async () => {
+      if (!id || !filename || id === '' || filename === '') {
+        return;
+      }
       const fileReq = await fetch(`/attachments/${id}/${filename}`);
+      
+      for(const [key, value] of fileReq.headers.entries()) {
+        console.log(`${key}: ${value}`);
+      }
       const download = document.getElementById('download');
       const previewBox = document.getElementById('preview');
       if (!fileReq.ok) {
@@ -40,6 +50,8 @@
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
       const fileType = file.type;
+      document.getElementById('filename_display').innerHTML = fileReq.headers.get("content-disposition");
+      document.getElementById('top_bar').classList.remove('opacity-0');
       previewBox.innerHTML = '';
       if (fileType.startsWith('image')) {
         const img = document.createElement('img');
