@@ -28,7 +28,7 @@
       }
       const fileReq = await fetch(`/attachments/${id}/${filename}`);
 
-      const realFilename = decodeURI(req.headers.get("content-disposition")).split("'")[2];
+      const realFilename = decodeURI(fileReq.headers.get("content-disposition")).split("'")[2];
       const download = document.getElementById('download');
       const previewBox = document.getElementById('preview');
       if (!fileReq.ok) {
