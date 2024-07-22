@@ -72,14 +72,16 @@
 
     uploadButton.addEventListener('click', () => {
       resultArea.innerHTML = 'Uploading...';
-      let fileCount = fileInput.files.length;
-      for (let i = 0; i < (fileCount < maxFileCount ? fileCount : maxFileCount); i++) {
+      let fileCount = Math.min(fileInput.files.length, maxFileCount);
+      for (let i = 0; i < fileCount; i++) {
         file = file_input.files[i];
+        let formData = new FormData();
         formData.append('file', file);
-        fetch(`/upload/file`, {
+        fetch('/upload/file', {
           method: 'POST',
           body: formData
         }).then(response => response.json()).then(data => {
+          // TODO: need to fix result display
           resultArea.innerHTML = '';
 
           if (!data.id) {
