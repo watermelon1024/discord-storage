@@ -10,9 +10,9 @@
 <body>
   <div class="w-full min-h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center relative">
     <div id="top_bar"
-      class="flex flex-row w-[95%] fixed hover:opacity-90 transition-all delay-200 p-2 justify-between top-0 opacity-0 shadow-inner rounded-xl shadow-gray-700 *:p-2 items-center bg-[rgba(0,0,0,0.7)]">
+      class="flex flex-row w-[95%] fixed hover:opacity-90 transition-all delay-200 p-2 justify-between top-0 opacity-80 shadow-inner rounded-xl shadow-gray-700 *:p-2 items-center bg-[rgba(0,0,0,0.7)]">
       <h1 class="text-xl" id="filename_display">Loading...</h1>
-      <a href="" id="download"></a>
+      <a href="" id="download">Download</a>
     </div>
     <div id="preview" class="*:max-w-[90%] *:border flex flex-row *:p-4 m-2 items-center justify-center">
       <p id="loading">Loading...</p>
@@ -26,11 +26,12 @@
       if (!id || !filename || id === '' || filename === '') {
         return;
       }
-      const fileReq = await fetch(`/attachments/${id}/${filename}`);
-
-      const realFilename = decodeURI(fileReq.headers.get("content-disposition")).split("'")[2];
-      const download = document.getElementById('download');
+      const topBar = document.getElementById('top_bar');
+      const filenameDisplay = document.getElementById('filename_display');
+      const downloadButton = document.getElementById('download');
       const previewBox = document.getElementById('preview');
+
+      const fileReq = await fetch(`/attachments/${id}/${filename}`);
       if (!fileReq.ok) {
         const status = fileReq.status;
         let previewText;
@@ -40,16 +41,19 @@
           previewText = 'Fail to load file';
         }
         previewBox.innerHTML = previewText;
-        download.hidden = true;
+        topBar.hidden = true;
+        filenameDisplay.hidden = true;
+        downloadButton.hidden = true;
         return;
       }
-      download.href = `/attachments/${id}/${filename}`;
-      download.innerHTML = 'Download';
+
+      const realFilename = decodeURI(fileReq.headers.get("content-disposition")).split("'")[2];
+      filenameDisplay.innerHTML = realFilename;
+      downloadButton.href = `/attachments/${id}/${filename}`;
+
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
       const fileType = file.type;
-      document.getElementById('filename_display').innerHTML = realFilename;
-      document.getElementById('top_bar').classList.remove('hidden');
       previewBox.innerHTML = '';
       if (fileType.startsWith('image')) {
         const img = document.createElement('img');
@@ -70,6 +74,9 @@
         p.innerHTML = `Cannot preview ${realFilename}`;
         previewBox.appendChild(p);
       }
+      setTimeout(() => {
+        topBar.classList.replace('opacity-80', 'opacity-0');
+      }, 2000);
     })();
   </script>
 </body>
