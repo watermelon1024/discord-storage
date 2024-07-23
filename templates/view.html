@@ -10,7 +10,7 @@
 <body>
   <div class="w-full min-h-svh dark:bg-black dark:text-white p-4 flex flex-col justify-center items-center relative">
     <div id="top_bar"
-      class="flex flex-row w-[95%] fixed hover:opacity-90 transition-all delay-200 p-2 justify-between top-0 opacity-80 shadow-inner rounded-xl shadow-gray-700 *:p-2 items-center bg-[rgba(0,0,0,0.7)]">
+      class="flex flex-row w-[95%] fixed hover:opacity-90 opacity-100 transition-all duration-[2500ms] delay-150 p-2 justify-between top-0 shadow-inner rounded-xl shadow-gray-700 *:p-2 items-center bg-[rgba(0,0,0,0.7)]">
       <h1 class="text-xl" id="filename_display">Loading...</h1>
       <a href="" id="download">Download</a>
     </div>
@@ -74,9 +74,13 @@
         p.innerHTML = `Cannot preview ${realFilename}`;
         previewBox.appendChild(p);
       }
+
       setTimeout(() => {
-        topBar.classList.replace('opacity-80', 'opacity-0');
-      }, 2000);
+        topBar.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => {
+          topBar.classList.replace('duration-[2500ms]', 'duration-[600ms]');
+        }, 2500);
+      }, 1500);
     })();
   </script>
 </body>
