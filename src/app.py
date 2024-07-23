@@ -72,7 +72,7 @@ async def route_upload_url(url: str):
             return JSONResponse({"message": "Invalid URL."}, status_code=400)
 
         filename = (
-            resp.content_disposition.filename
+            (resp.content_disposition and resp.content_disposition.filename)
             or resp.url.path.split("/")[-1]
             or f"file{utils.guess_filename(resp.content_type)}"
         )
