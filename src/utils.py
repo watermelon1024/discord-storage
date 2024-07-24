@@ -26,3 +26,14 @@ def parse_request_range(range_str: str):
         start, end = match.groups()
         return start, end
     return None, None
+
+
+def size_to_str(size: int):
+    """
+    Give the file size in bytes, convert it to a human-readable value.
+    """
+    for unit in [" bytes", "KB", "MB", "GB", "TB", "PB"]:
+        if size < 1024:
+            break
+        size /= 1024
+    return f"{size:.2f} {unit}"

@@ -109,6 +109,15 @@ async def route_attachments(request: Request, id: str, filename: str):
     return StreamingResponseWithStatusCode(file, headers=headers, media_type=utils.guess_mime_type(filename))
 
 
-@app.get("/view/{path:path}")
-async def view_route(request: Request):
-    return templates.TemplateResponse(request=request, name="view.html")
+@app.get("/view/{id}/{filename}")
+async def view_route(request: Request, id: str, filename: str):
+    try:
+        real_filename, legalized_filename, size, message_ids = await bot.check_file(id, filename)
+    except FileNotFoundError:
+        return Response("This content is no longer available.", 404, media_type="text/plain")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="view.html",
+        context={"real_fimename": real_filename, "file_size": utils.size_to_str(size)},
+    )
