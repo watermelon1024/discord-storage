@@ -92,7 +92,7 @@ class SQLiteCache:
                 WHERE key IN ({", ".join(f"'{s}'" for s in to_delete)})
                 """
             )
-            await db.execute("VACUME cache")
+            await db.execute("VACUME")
             await db.commit()
 
     # async def _delete_expired(self):
