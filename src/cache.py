@@ -83,7 +83,7 @@ class SQLiteCache:
             to_delete = []
             for row in rows:
                 to_delete.append(row["key"])
-                current_size -= row["size"]
+                current_size -= int(row["size"])
                 if current_size < self.max_size:
                     break
             await db.execute(
