@@ -119,5 +119,5 @@ async def view_route(request: Request, id: str, filename: str):
     return templates.TemplateResponse(
         request=request,
         name="view.html",
-        context={"real_fimename": real_filename, "file_size": utils.size_to_str(size)},
+        context={"real_fimename": real_filename, "file_size": utils.size_to_str(int(size))},
     )
