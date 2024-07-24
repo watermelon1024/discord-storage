@@ -4,6 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Cloud Storage</title>
+  <meta name="title" content="Cloud Storage" />
+  <meta name="description" content="A free, private and easy-to-use file sharing website" />
+  <meta name="theme-color" content="#4AB4EF">
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Cloud Storage" />
+  <meta property="og:description" content="A free, private and easy-to-use file sharing website" />
+
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -70,7 +80,7 @@
       }
     });
 
-    uploadButton.addEventListener('click',async () => {
+    uploadButton.addEventListener('click', async () => {
       resultArea.innerHTML = 'Uploading...';
       let fileCount = Math.min(fileInput.files.length, maxFileCount);
       for (let i = 0; i < fileCount; i++) {
