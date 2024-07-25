@@ -92,9 +92,10 @@ async def websocket_endpoint(ws: WebSocket):
         file_id: str = message["id"]
         # TODO: get chunk number from cache
         chunk_number = 0
-        await ws.send_json({"id": file_id, "chunk": chunk_number})
+        await ws.send_json({"type": "data", "id": file_id, "chunk": chunk_number})
         received_chunk_number = chunk_number
         while True:
+            # TODO: add receive timeout
             message = await ws.receive()
             if message["type"] == "websocket.disconnect":
                 raise WebSocketDisconnect
@@ -103,7 +104,9 @@ async def websocket_endpoint(ws: WebSocket):
                 text = message.get("text")
                 if text:
                     data: dict = json.loads(text)
-                    # TODO: identify heartbeat
+                    if data["type"] == "ping":
+                        await ws.send_json({"type": "pong"})
+                    file_id: str = data["id"]
                     received_chunk_number = data["chunk"]
                 else:
                     chunk: bytes = message["bytes"]
