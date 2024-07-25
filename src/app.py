@@ -1,9 +1,10 @@
+import json
 import os
 from contextlib import asynccontextmanager
 
 import aiohttp
 import discord
-from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi import FastAPI, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -79,6 +80,36 @@ async def route_upload_url(url: str):
         id, legalized_filename = await bot.upload_file(resp.content, filename)
 
     return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
+
+
+@app.websocket("/upload/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    try:
+        # receive file info
+        message = await ws.receive_json()
+        # file id is equal to file hash
+        file_id: str = message["id"]
+        # TODO: get chunk number from cache
+        chunk_number = 0
+        await ws.send_json({"id": file_id, "chunk": chunk_number})
+        received_chunk_number = chunk_number
+        while True:
+            message = await ws.receive()
+            if message["type"] == "websocket.disconnect":
+                raise WebSocketDisconnect
+            if message["type"] == "websocket.receive":
+                # receive file body here
+                text = message.get("text")
+                if text:
+                    data: dict = json.loads(text)
+                    # TODO: identify heartbeat
+                    received_chunk_number = data["chunk"]
+                else:
+                    chunk: bytes = message["bytes"]
+                    # TODO: write chunk data to file
+    except WebSocketDisconnect:
+        pass
 
 
 @app.get("/attachments/{id}/{filename}")
