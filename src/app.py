@@ -1,5 +1,8 @@
+import asyncio
 import json
 import os
+import time
+import uuid
 from contextlib import asynccontextmanager
 
 import aiohttp
@@ -13,9 +16,6 @@ from fastapi.websockets import WebSocketState
 from . import utils
 from .bot import Bot
 from .response import StreamingResponseWithStatusCode
-import asyncio
-import time
-import uuid
 
 
 @asynccontextmanager
@@ -93,6 +93,8 @@ file_upload_status = {}
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     try:
+        file_hash = None
+        allow_upload = False
         while True:
             try:
                 message = await asyncio.wait_for(ws.receive(), 60)
@@ -103,7 +105,6 @@ async def websocket_endpoint(ws: WebSocket):
             if message["type"] == "websocket.disconnect":
                 raise WebSocketDisconnect
             if message["type"] == "websocket.receive":
-                # receive file body here
                 if text := message.get("text"):
                     data: dict = json.loads(text)
                     data_type: str = data.get("type")
@@ -135,8 +136,8 @@ async def websocket_endpoint(ws: WebSocket):
                                 "chunk_size": chunk_size,
                                 "total_chunks": total_chunks,
                                 "current_chunk": 0,
-                                "chunk_cache": b"",
                             }
+                        allow_upload = False
                         await ws.send_json(
                             {
                                 "code": 200,
@@ -145,24 +146,40 @@ async def websocket_endpoint(ws: WebSocket):
                                 "current_chunk": status["current_chunk"],
                             }
                         )
+
                     elif data_type == "send_chunk":
-                        ...
+                        status = file_upload_status.get(file_hash)
+                        if status is None:
+                            await ws.send_json({"code": 404, "message": "File not found."})
+                            continue
+
+                        chunk_index: int = data.get("chunk_index")
+                        if not chunk_index:
+                            allow_upload = False
+                            await ws.send_json({"code": 400, "message": "Invalid chunk index."})
+                            continue
+
+                        status["current_chunk"] = chunk_index
+                        allow_upload = True
+
                     elif data_type == "end":
                         status = file_upload_status.pop(file_hash, None)
                         if status is None:
                             await ws.send_json({"code": 404, "message": "File not found."})
                             continue
 
+                        allow_upload = False
                         file_id = status["file_id"]
                         filename = status["filename"]
                         legalized_filename = utils.legalize_filename(filename)
+                        messages = (m[1] for m in sorted(status["messages"], key=lambda x: x[0]))
                         await bot.db.add_file(
-                            file_id, filename, legalized_filename, status["total_size"], status["messages"]
+                            file_id, filename, legalized_filename, status["total_size"], messages
                         )
                         await ws.send_json(
                             {
                                 "code": 200,
-                                "message": "Success",
+                                "message": "Upload successfully.",
                                 "file_id": file_id,
                                 "name": legalized_filename,
                             }
@@ -171,11 +188,27 @@ async def websocket_endpoint(ws: WebSocket):
                         pass
 
                 elif byte := message.get("bytes"):
-                    byte
+                    if not allow_upload:
+                        await ws.send_json({"code": 403, "message": "Upload not allowed."})
+                        continue
+
+                    status = file_upload_status.get(file_hash)
+                    bot.loop.create_task(_upload_chunk(file_hash, status, chunk_index, byte, ws))
+                    allow_upload = False
+
                 else:
                     pass
+
     except WebSocketDisconnect:
         ws.client_state = WebSocketState.DISCONNECTED
+
+
+async def _upload_chunk(id: str, status: dict, idx: int, data: bytes, ws: WebSocket):
+    try:
+        idx, msg = await bot._upload_chunk(id, idx, data)
+        status["messages"].append((idx, str(msg.id)))
+    except Exception:
+        await ws.send_json({"code": 500, "message": "Fail to upload, please retry later..."})
 
 
 @app.get("/attachments/{id}/{filename}")
