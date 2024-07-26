@@ -102,7 +102,7 @@ class SQLiteCache:
     #         await db.execute("VACUME cache")
     #         await db.commit()
 
-    async def set(self, key: str, value: bytes, ttl=None):
+    async def set(self, key: str, value: bytes, size: int = None, ttl=None):
         """
         Set a key-value pair in the cache with an optional time-to-live (TTL)
         """
@@ -117,10 +117,21 @@ class SQLiteCache:
                 INSERT OR REPLACE INTO cache (key, value, size, expiration_time, last_access_time)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (key, value, len(value), expiration_time, last_access_time),
+                (key, value, size or len(value), expiration_time, last_access_time),
             )
             await db.commit()
         asyncio.create_task(self._evict_if_needed())
+
+    async def append_at_end(self, key: str, value: bytes):
+        """
+        Append the given value to the end of the value already associated with the key
+        """
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute(
+                "UPDATE cache SET value = CAST(value || ? AS BLOB) WHERE key = ?",
+                (value, key),
+            )
+            await db.commit()
 
     async def get(self, key: str, start: int = 0, interval: int = None) -> bytes:
         """

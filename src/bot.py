@@ -43,13 +43,15 @@ class Bot(discord.Client):
     async def _get_attachment(self, message_id: int):
         return (await self.get_or_fetch_message(message_id)).attachments[0]
 
-    async def _first_combine(self, id: str, tasks: list[tuple[asyncio.Task[bytes], asyncio.Event]]):
-        data = b""
+    async def _first_combine(
+        self, id: str, size: int, tasks: list[tuple[asyncio.Task[bytes], asyncio.Event]]
+    ):
+        await self.file_cache.set(id, b"", size)
         for task, event in tasks:
-            data += await task
+            data = await task
             event.set()
+            await self.file_cache.append_at_end(id, data)
 
-        await self.file_cache.set(id, data)
         self.attachments_cache.pop(id, None)
 
     async def _combine(self, tasks: list[tuple[asyncio.Task[bytes], asyncio.Event]]):
@@ -122,7 +124,7 @@ class Bot(discord.Client):
             self.attachments_cache[id] = tasks = [
                 (self.loop.create_task(attachment.read()), asyncio.Event()) for attachment in attachments
             ]
-            self.loop.create_task(self._first_combine(id, tasks))
+            self.loop.create_task(self._first_combine(id, size, tasks))
 
         return real_filename, size, self._combine(tasks)
 
