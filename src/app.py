@@ -8,10 +8,14 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, WebSocket, WebS
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
+from fastapi.websockets import WebSocketState
 
 from . import utils
 from .bot import Bot
 from .response import StreamingResponseWithStatusCode
+import asyncio
+import time
+import uuid
 
 
 @asynccontextmanager
@@ -82,37 +86,96 @@ async def route_upload_url(url: str):
     return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
 
 
+file_upload_status = {}
+
+
 @app.websocket("/upload/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     try:
-        # receive file info
-        message = await ws.receive_json()
-        # file id is equal to file hash
-        file_id: str = message["id"]
-        # TODO: get chunk number from cache
-        chunk_number = 0
-        await ws.send_json({"type": "data", "id": file_id, "chunk": chunk_number})
-        received_chunk_number = chunk_number
         while True:
-            # TODO: add receive timeout
-            message = await ws.receive()
+            try:
+                message = await asyncio.wait_for(ws.receive(), 60)
+            except asyncio.TimeoutError:
+                await ws.close(1001)
+                raise WebSocketDisconnect
+
             if message["type"] == "websocket.disconnect":
                 raise WebSocketDisconnect
             if message["type"] == "websocket.receive":
                 # receive file body here
-                text = message.get("text")
-                if text:
+                if text := message.get("text"):
                     data: dict = json.loads(text)
-                    if data["type"] == "ping":
-                        await ws.send_json({"type": "pong"})
-                    file_id: str = data["id"]
-                    received_chunk_number = data["chunk"]
+                    data_type: str = data.get("type")
+                    if data_type == "ping":
+                        await ws.send_json({"code": 200, "message": "Pong"})
+                        continue
+
+                    file_hash: str = data.get("id")
+                    if not file_hash:
+                        await ws.close(1008)
+                        raise WebSocketDisconnect
+
+                    if data_type == "start":
+                        filename: str = data.get("filename")
+                        total_size: int = data.get("total_size")
+                        chunk_size: int = data.get("chunk_size")
+                        total_chunks: int = data.get("total_chunks")
+                        if not (filename and total_size and chunk_size and total_chunks):
+                            await ws.close(1008)
+                            raise WebSocketDisconnect
+                        status = file_upload_status.get(file_hash)
+                        if status is None:
+                            status = file_upload_status[file_hash] = {
+                                "start": time.time(),
+                                "file_id": str(uuid.uuid4()),
+                                "filename": filename,
+                                "messages": [],
+                                "total_size": total_size,
+                                "chunk_size": chunk_size,
+                                "total_chunks": total_chunks,
+                                "current_chunk": 0,
+                                "chunk_cache": b"",
+                            }
+                        await ws.send_json(
+                            {
+                                "code": 200,
+                                "message": "Accept",
+                                "id": file_hash,
+                                "current_chunk": status["current_chunk"],
+                            }
+                        )
+                    elif data_type == "send_chunk":
+                        ...
+                    elif data_type == "end":
+                        status = file_upload_status.pop(file_hash, None)
+                        if status is None:
+                            await ws.send_json({"code": 404, "message": "File not found."})
+                            continue
+
+                        file_id = status["file_id"]
+                        filename = status["filename"]
+                        legalized_filename = utils.legalize_filename(filename)
+                        await bot.db.add_file(
+                            file_id, filename, legalized_filename, status["total_size"], status["messages"]
+                        )
+                        await ws.send_json(
+                            {
+                                "code": 200,
+                                "message": "Success",
+                                "file_id": file_id,
+                                "name": legalized_filename,
+                            }
+                        )
+                    else:
+                        pass
+
+                elif byte := message.get("bytes"):
+                    byte
                 else:
-                    chunk: bytes = message["bytes"]
-                    # TODO: write chunk data to file
+                    pass
     except WebSocketDisconnect:
-        pass
+        ws.client_state = WebSocketState.DISCONNECTED
 
 
 @app.get("/attachments/{id}/{filename}")
