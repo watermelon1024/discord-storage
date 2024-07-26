@@ -110,6 +110,8 @@ async def websocket_endpoint(ws: WebSocket):
                         data: dict = json.loads(text)
                     except json.JSONDecodeError:
                         await ws.send_json({"code": 400, "message": "Invalid JSON."})
+                        continue
+
                     data_type: str = data.get("type")
                     if data_type == "ping":
                         await ws.send_json({"code": 200, "message": "Pong"})
