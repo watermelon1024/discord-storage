@@ -101,8 +101,8 @@
         await fetch('/upload/file', {
           method: 'POST',
           headers: {
-            contentType: 'application/octet-stream',
-            contentDisposition: `attachment; filename*=UTF-8''${encodeURI(file.name)}`
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURI(file.name)}`
           },
           body: readableStream
         }).then(response => response.json()).then(data => {
