@@ -68,10 +68,10 @@ async def route_upload_file(request: Request, file: UploadFile):
 
 @app.post("/upload/file2")
 async def route_upload_file2(request: Request):
-    l = 0
-    async for data in request.stream():
-        l += len(l)
-        print(l)
+    data = b""
+    async for chunk in request.stream():
+        data += chunk
+    print(f"Received {len(data)} bytes of data.")
     return JSONResponse(content={"message": "File uploaded successfully"})
 
 
