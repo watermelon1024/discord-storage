@@ -72,6 +72,7 @@ async def route_upload_file2(request: Request):
     async for data in request.stream():
         l += len(l)
         print(l)
+    return JSONResponse(content={"message": "File uploaded successfully"})
 
 
 @app.post("/upload/url")
