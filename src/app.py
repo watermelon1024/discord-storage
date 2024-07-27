@@ -57,7 +57,6 @@ async def root(request: Request):
 
 @app.post("/upload/file")
 async def route_upload_file(request: Request):
-    print(request.headers)
     filename = (
         utils.get_filename(request.headers.get("content-disposition", ""))
         or f"file.{utils.guess_extension(request.headers.get('content-type', ''))}"
