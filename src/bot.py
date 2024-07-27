@@ -1,10 +1,10 @@
 import asyncio
 import io
 import os
+import typing
 import uuid
 
 import discord
-from fastapi import UploadFile
 
 from . import utils
 from .cache import SQLiteCache
@@ -128,30 +128,21 @@ class Bot(discord.Client):
 
         return real_filename, size, self._combine(tasks)
 
-    async def _split_file(self, data: UploadFile, max_size: int = DEFAULT_MAX_SIZE):
-        """
-        Splits a file into chunks of a maximum size.
+    async def get_generator(
+        self, stream: typing.AsyncGenerator[bytes, None], max_size: int = DEFAULT_MAX_SIZE
+    ):
+        size = 0
+        data = b""
+        async for chunk in stream:
+            chunk_size = len(chunk)
+            if chunk_size + size > max_size:
+                yield data
+                size = 0
+                data = b""
 
-        :return: The index of the chunk and the chunk data.
-        :rtype: AsyncGenerator[int, bytes]
-        """
-        idx = 0
-        sizes = 0
-        chunks = b""
-        while True:
-            chunk = await data.read(max_size)
-            if not chunk:
-                yield idx, chunks
-                break
-            size = len(chunk)
-            if size + sizes > max_size:
-                yield idx, chunks
-                idx += 1
-                sizes = 0
-                chunks = b""
-
-            sizes += size
-            chunks += chunk
+            size += chunk_size
+            data += chunk
+        yield data
 
     async def _upload_chunk(self, id: str, idx: int, data: bytes):
         max_retry = 10
@@ -163,7 +154,9 @@ class Bot(discord.Client):
                     raise
         raise Exception("Failed to upload file")
 
-    async def upload_file(self, data: UploadFile, name: str, size: int = None) -> tuple[str, str]:
+    async def upload_file(
+        self, data: typing.AsyncGenerator[bytes, None], name: str, size: int = None
+    ) -> tuple[str, str]:
         """
         Uploads a file to the channel.
 
@@ -173,8 +166,10 @@ class Bot(discord.Client):
         id = str(uuid.uuid4())
 
         tasks: list[asyncio.Task[tuple[int, discord.Message]]] = []
-        async for idx, d in self._split_file(data):
+        idx = 0
+        async for d in self.get_generator(data):
             tasks.append(asyncio.create_task(self._upload_chunk(id, idx, d)))
+            idx += 1
         done, pending = await asyncio.wait(tasks)
         messages = [r[1] for r in sorted((t.result() for t in done), key=lambda x: x[0])]
         if not size:

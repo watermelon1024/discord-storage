@@ -1,17 +1,12 @@
-import asyncio
-import json
 import os
-import time
-import uuid
 from contextlib import asynccontextmanager
 
 import aiohttp
 import discord
-from fastapi import FastAPI, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.templating import Jinja2Templates
-from fastapi.websockets import WebSocketState
 
 from . import utils
 from .bot import Bot
@@ -61,22 +56,17 @@ async def root(request: Request):
 
 
 @app.post("/upload/file")
-async def route_upload_file(request: Request, file: UploadFile):
-    id, legalized_filename = await bot.upload_file(file, file.filename, file.size)
+async def route_upload_file(request: Request):
+    filename = (
+        utils.get_filename(request.headers.get("Content-Disposition", ""))
+        or f"file.{utils.guess_extension(request.headers.get('Content-Type', ''))}"
+    )
+    id, legalized_filename = await bot.upload_file(request.stream(), filename)
     return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
 
 
-@app.post("/upload/file2")
-async def route_upload_file2(request: Request):
-    data = b""
-    async for chunk in request.stream():
-        data += chunk
-    print(f"Received {len(data)} bytes of data.")
-    return JSONResponse(content={"message": "File uploaded successfully"})
-
-
 @app.post("/upload/url")
-async def route_upload_url(url: str):
+async def route_upload_url(request: Request, url: str):
     parsed_url = utils.urlparse(url)
     if not parsed_url.scheme or not parsed_url.netloc:
         return JSONResponse({"message": "Invalid URL."}, status_code=400)
@@ -88,141 +78,13 @@ async def route_upload_url(url: str):
         filename = (
             (resp.content_disposition and resp.content_disposition.filename)
             or resp.url.path.split("/")[-1]
-            or f"file{utils.guess_filename(resp.content_type)}"
+            or f"file{utils.guess_extension(resp.content_type)}"
         )
-        id, legalized_filename = await bot.upload_file(resp.content, filename)
+        id, legalized_filename = await bot.upload_file(
+            resp.content.iter_chunked(bot.DEFAULT_MAX_SIZE), filename
+        )
 
     return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
-
-
-file_upload_status = {}
-
-
-@app.websocket("/upload/ws")
-async def websocket_endpoint(ws: WebSocket):
-    await ws.accept()
-    try:
-        file_hash = None
-        allow_upload = False
-        while True:
-            try:
-                message = await asyncio.wait_for(ws.receive(), 60)
-            except asyncio.TimeoutError:
-                await ws.close(1001)
-                raise WebSocketDisconnect
-
-            if message["type"] == "websocket.disconnect":
-                raise WebSocketDisconnect
-            if message["type"] == "websocket.receive":
-                if text := message.get("text"):
-                    try:
-                        data: dict = json.loads(text)
-                    except json.JSONDecodeError:
-                        await ws.send_json({"code": 400, "message": "Invalid JSON."})
-                        continue
-
-                    data_type: str = data.get("type")
-                    if data_type == "ping":
-                        await ws.send_json({"code": 200, "message": "Pong"})
-                        continue
-
-                    file_hash: str = data.get("id")
-                    if not file_hash:
-                        await ws.close(1008)
-                        raise WebSocketDisconnect
-
-                    if data_type == "start":
-                        filename: str = data.get("filename")
-                        total_size: int = data.get("total_size")
-                        chunk_size: int = data.get("chunk_size")
-                        total_chunks: int = data.get("total_chunks")
-                        if not (filename and total_size and chunk_size and total_chunks):
-                            await ws.close(1008)
-                            raise WebSocketDisconnect
-                        status = file_upload_status.get(file_hash)
-                        if status is None:
-                            status = file_upload_status[file_hash] = {
-                                "start": time.time(),
-                                "file_id": str(uuid.uuid4()),
-                                "filename": filename,
-                                "messages": [],
-                                "total_size": total_size,
-                                "chunk_size": chunk_size,
-                                "total_chunks": total_chunks,
-                                "current_chunk": 0,
-                            }
-                        allow_upload = False
-                        await ws.send_json(
-                            {
-                                "code": 200,
-                                "message": "Accept",
-                                "id": file_hash,
-                                "current_chunk": status["current_chunk"],
-                            }
-                        )
-
-                    elif data_type == "send_chunk":
-                        status = file_upload_status.get(file_hash)
-                        if status is None:
-                            await ws.send_json({"code": 404, "message": "File not found."})
-                            continue
-
-                        chunk_index: int = data.get("chunk_index")
-                        if not chunk_index:
-                            allow_upload = False
-                            await ws.send_json({"code": 400, "message": "Invalid chunk index."})
-                            continue
-
-                        status["current_chunk"] = chunk_index
-                        allow_upload = True
-
-                    elif data_type == "end":
-                        status = file_upload_status.pop(file_hash, None)
-                        if status is None:
-                            await ws.send_json({"code": 404, "message": "File not found."})
-                            continue
-
-                        allow_upload = False
-                        file_id = status["file_id"]
-                        filename = status["filename"]
-                        legalized_filename = utils.legalize_filename(filename)
-                        messages = (m[1] for m in sorted(status["messages"], key=lambda x: x[0]))
-                        await bot.db.add_file(
-                            file_id, filename, legalized_filename, status["total_size"], messages
-                        )
-                        await ws.send_json(
-                            {
-                                "code": 200,
-                                "message": "Upload successfully.",
-                                "file_id": file_id,
-                                "name": legalized_filename,
-                            }
-                        )
-                    else:
-                        pass
-
-                elif byte := message.get("bytes"):
-                    if not allow_upload:
-                        await ws.send_json({"code": 403, "message": "Upload not allowed."})
-                        continue
-
-                    status = file_upload_status.get(file_hash)
-                    bot.loop.create_task(_upload_chunk(file_hash, status, chunk_index, byte, ws))
-                    allow_upload = False
-
-                else:
-                    pass
-
-    except WebSocketDisconnect:
-        ws.client_state = WebSocketState.DISCONNECTED
-
-
-async def _upload_chunk(id: str, status: dict, idx: int, data: bytes, ws: WebSocket):
-    try:
-        idx, msg = await bot._upload_chunk(id, idx, data)
-        status["messages"].append((idx, str(msg.id)))
-    except Exception:
-        await ws.send_json({"code": 500, "message": "Fail to upload, please retry later..."})
 
 
 @app.get("/attachments/{id}/{filename}")
