@@ -98,11 +98,11 @@
       for (let i = 0; i < fileCount; i++) {
         file = file_input.files[i];
         const readableStream = file.slice(0, file.size, file.type).stream().getReader();
-        await fetch('/upload/file2', {
+        await fetch('/upload/file', {
           method: 'POST',
           headers: {
             contentType: 'application/octet-stream',
-            contentDisposition: `attachment; filename="${file.name}"`
+            contentDisposition: `attachment; filename*=UTF-8''${encodeURI(file.name)}`
           },
           body: readableStream
         }).then(response => response.json()).then(data => {
