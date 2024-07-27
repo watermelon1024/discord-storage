@@ -85,12 +85,18 @@
       let fileCount = Math.min(fileInput.files.length, maxFileCount);
       for (let i = 0; i < fileCount; i++) {
         file = file_input.files[i];
-        let formData = new FormData();
-        formData.append('file', file);
-        await fetch('/upload/file', {
+        const readableStream = file.slice(0, file.size, file.type).stream().getReader();
           method: 'POST',
-          body: formData
+          headers: {
+            contentType: 'application/octet-stream',
+            contentDisposition: `attachment; filename="${file.name}"`
+          },
+          body: readableStream
         }).then(response => response.json()).then(data => {
+          console.log(data);
+          if (document.getElementById('uploading')) {
+            document.getElementById('uploading').remove();
+          }
           if (!data.id) {
             return;
           }
