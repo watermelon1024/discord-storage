@@ -60,10 +60,18 @@ async def root(request: Request):
     return templates.TemplateResponse(request=request, name="upload.html")
 
 
-@app.post("/upload/file", response_class=HTMLResponse)
-async def route_upload_file(file: UploadFile):
+@app.post("/upload/file")
+async def route_upload_file(request: Request, file: UploadFile):
     id, legalized_filename = await bot.upload_file(file, file.filename, file.size)
     return JSONResponse({"message": "Uploaded successfully.", "id": id, "filename": legalized_filename})
+
+
+@app.post("/upload/file2")
+async def route_upload_file2(request: Request):
+    l = 0
+    async for data in request.stream():
+        l += len(l)
+        print(l)
 
 
 @app.post("/upload/url")
