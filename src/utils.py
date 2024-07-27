@@ -1,10 +1,10 @@
 import mimetypes
 import re
-from urllib.parse import quote, urlparse  # noqa: F401
+from urllib.parse import quote, unquote, urlparse  # noqa: F401
 
 RE_ILLEGAL_FILENAME_CHARS = re.compile(r"[^a-zA-Z0-9\-\.\_]")
 RE_REQUEST_RANGE = re.compile(r"bytes=(\d+)-(\d+)?")
-RE_FILENAME = re.compile(r"filename=\"(.+)\"")
+RE_FILENAME = re.compile(r"filename\*=UTF-8''(.+)")
 
 
 def guess_extension(content_type: str):
@@ -21,7 +21,7 @@ def get_filename(conetent_description: str):
     match_ = RE_FILENAME.search(conetent_description)
     if match_ is None:
         return None
-    return match_.group(1)
+    return unquote(match_.group(1))
 
 
 def legalize_filename(filename: str):
