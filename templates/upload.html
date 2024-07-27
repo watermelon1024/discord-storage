@@ -97,40 +97,15 @@
       resultArea.appendChild(uploading);
       for (let i = 0; i < fileCount; i++) {
         file = file_input.files[i];
-        let offset = 0;
-        const chunkSize = 1024 * 1024;
-        const stream = new ReadableStream({
-          start(controller) {
-            function push() {
-              const chunk = file.slice(offset, offset + chunkSize);
-              const reader = new FileReader();
-              reader.onload = () => {
-                if (reader.result) {
-                  controller.enqueue(new Uint8Array(reader.result));
-                  offset += chunkSize;
-                  if (offset < file.size) {
-                    push();
-                  } else {
-                    controller.close();
-                  }
-                }
-              };
-              reader.onerror = () => {
-                controller.error("File reading error");
-              };
-              reader.readAsArrayBuffer(chunk);
-            }
-            push();
-          }
-        });
-        await fetch('https://cdn.pikacnu.com/upload/file2', {
+        await fetch('/upload/file', {
           method: 'POST',
           duplex: 'half',
           headers: {
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURI(file.name)}`,
             'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURI(file.name)}`
+            'Connection': 'keep-alive'
           },
-          body: stream
+          body: file.stream()
         }).then(response => response.json()).then(data => {
           console.log(data);
           if (document.getElementById('uploading')) {
