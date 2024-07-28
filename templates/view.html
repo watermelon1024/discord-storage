@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <title>{{real_filename}}</title>
   <meta name="title" content="{{real_filename}}" />
   <meta name="description" content="View {{real_filename}} ({{file_size}}) online" />
@@ -57,7 +57,7 @@
         return;
       }
 
-      const realFilename = decodeURI(fileReq.headers.get("content-disposition")).split("'")[2];
+      const realFilename = decodeURIComponent(fileReq.headers.get("content-disposition")).split("'")[2];
       filenameDisplay.innerHTML = realFilename;
       downloadButton.href = `/attachments/${id}/${filename}`;
 

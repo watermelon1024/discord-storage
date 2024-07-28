@@ -101,7 +101,7 @@
           method: 'POST',
           duplex: 'half',
           headers: {
-            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURI(file.name)}`,
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`,
             'Content-Type': 'application/octet-stream',
             'Connection': 'keep-alive'
           },
