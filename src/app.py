@@ -66,12 +66,12 @@ async def route_upload_file(request: Request):
 
 
 @app.post("/upload/url")
-async def route_upload_url(request: Request, url: str):
-    parsed_url = utils.urlparse(url)
+async def route_upload_url(request: Request, v: str):
+    parsed_url = utils.urlparse(v)
     if not parsed_url.scheme or not parsed_url.netloc:
         return JSONResponse({"message": "Invalid URL."}, status_code=400)
 
-    async with aiohttp.request("GET", url) as resp:
+    async with aiohttp.request("GET", v) as resp:
         if not resp.ok:
             return JSONResponse({"message": "Invalid URL."}, status_code=400)
 
