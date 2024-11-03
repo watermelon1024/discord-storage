@@ -61,28 +61,36 @@
       filenameDisplay.innerHTML = realFilename;
       downloadButton.href = `/attachments/${id}/${filename}`;
 
+      const fileContentType = fileReq.headers.get('content-type');
+      let fileType;
+      if (fileContentType.startsWith('image')) {
+        fileType = "image";
+      } else if (fileContentType.startsWith('video')) {
+        fileType = "video";
+      } else if (fileContentType.startsWith('audio')) {
+        fileType = "audio";
+      } else {
+        previewBox.innerHTML = `Cannot preview ${realFilename}: Unsupported file type.`;
+        return;
+      }
+
       const file = await fileReq.blob();
       const url = URL.createObjectURL(file);
-      const fileType = file.type;
       previewBox.innerHTML = '';
-      if (fileType.startsWith('image')) {
+      if (fileType === 'image') {
         const img = document.createElement('img');
         img.src = url;
         previewBox.appendChild(img);
-      } else if (fileType.startsWith('video')) {
+      } else if (fileType === 'video') {
         const video = document.createElement('video');
         video.src = url;
         video.controls = true;
         previewBox.appendChild(video);
-      } else if (fileType.startsWith('audio')) {
+      } else if (fileType === 'audio') {
         const audio = document.createElement('audio');
         audio.src = url;
         audio.controls = true;
         previewBox.appendChild(audio);
-      } else {
-        const p = document.createElement('p');
-        p.innerHTML = `Cannot preview ${realFilename}`;
-        previewBox.appendChild(p);
       }
 
       setTimeout(() => {
