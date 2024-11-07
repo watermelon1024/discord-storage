@@ -41,7 +41,8 @@
       const downloadButton = document.getElementById('download');
       const previewBox = document.getElementById('preview');
 
-      const fileReq = await fetch(`/attachments/${id}/${filename}`);
+      const downloadURL = `/attachments/${id}/${filename}`
+      const fileReq = await fetch(downloadURL);
       if (!fileReq.ok) {
         const status = fileReq.status;
         let previewText;
@@ -59,7 +60,7 @@
 
       const realFilename = decodeURIComponent(fileReq.headers.get("content-disposition")).split("'")[2];
       filenameDisplay.innerHTML = realFilename;
-      downloadButton.href = `/attachments/${id}/${filename}`;
+      downloadButton.href = downloadURL;
 
       const fileContentType = fileReq.headers.get('content-type');
       let fileType;
@@ -70,7 +71,10 @@
       } else if (fileContentType.startsWith('audio')) {
         fileType = "audio";
       } else {
-        previewBox.innerHTML = `Cannot preview ${realFilename}: Unsupported file type.`;
+        previewBox.innerHTML = `<div class="flex flex-col items-center">
+          Cannot preview ${realFilename}: Unsupported file type.
+          <a href="${downloadURL}" id="download">Download</a>
+          </div>`;
         return;
       }
 
@@ -91,6 +95,8 @@
         audio.src = url;
         audio.controls = true;
         previewBox.appendChild(audio);
+      } else {
+        previewBox.innerHTML = 'Unsupported file type.';
       }
 
       setTimeout(() => {
