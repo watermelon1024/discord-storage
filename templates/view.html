@@ -24,7 +24,7 @@
       <h1 class="text-xl" id="filename_display">Loading...</h1>
       <a href="" id="download">Download</a>
     </div>
-    <div id="preview" class="*:max-w-[90%] *:border flex flex-row *:p-4 m-2 items-center justify-center z-1">
+    <div id="preview" class="flex flex-row w-[80%] *:max-w-[90%] *:border *:p-4 m-2 items-center justify-center z-1">
       <p id="loading">Loading...</p>
     </div>
   </div>
@@ -71,8 +71,8 @@
       } else if (fileContentType.startsWith('audio')) {
         fileType = "audio";
       } else {
-        previewBox.innerHTML = `<div class="flex flex-col items-center">
-          Cannot preview ${realFilename}: Unsupported file type.
+        previewBox.innerHTML = `<div class="flex flex-col items-center space-y-6">
+          <p>Cannot preview ${realFilename}: Unsupported file type.<p/>
           <a href="${downloadURL}" id="download">Download</a>
           </div>`;
         return;
