@@ -12,12 +12,13 @@ from .database import Database
 
 
 class Bot(discord.Client):
-    DEFAULT_MAX_SIZE: int = 25 * 1024 * 1024  # 25 MB
+    DEFAULT_MAX_SIZE: int = 8 * 1024 * 1024  # 8 MB
     __init_task = None
 
     async def initialize(self):
         channel_id = int(os.getenv("CHANNEL"))
         self.channel = self.get_channel(channel_id) or await self.fetch_channel(channel_id)
+        self.DEFAULT_MAX_SIZE = self.channel.guild.filesize_limit
 
         self.attachments_cache: dict[str, list[tuple[asyncio.Task[bytes], asyncio.Event]]] = {}
         self.db = Database(os.getenv("DB_PATH") or "storage/database.db")
